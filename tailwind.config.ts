@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        mono: ['JetBrains Mono', 'SF Mono', 'Fira Code', 'monospace'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -91,6 +95,32 @@ export default {
             opacity: "1",
             transform: "scale(1)"
           }
+        },
+        "glow-pulse": {
+          "0%, 100%": {
+            opacity: "0.4"
+          },
+          "50%": {
+            opacity: "1"
+          }
+        },
+        "float": {
+          "0%, 100%": {
+            transform: "translateY(0px)"
+          },
+          "50%": {
+            transform: "translateY(-10px)"
+          }
+        },
+        "slide-in-right": {
+          "0%": {
+            opacity: "0",
+            transform: "translateX(20px)"
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateX(0)"
+          }
         }
       },
       animation: {
@@ -98,14 +128,20 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in-up": "fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
         "scale-in": "scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "float": "float 6s ease-in-out infinite",
+        "slide-in-right": "slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
       },
       backgroundImage: {
         'gradient-hero': 'var(--gradient-hero)',
-        'gradient-overlay': 'var(--gradient-overlay)',
+        'gradient-glow': 'var(--gradient-glow)',
+        'gradient-card': 'var(--gradient-card)',
       },
       boxShadow: {
-        'architectural': 'var(--shadow-architectural)',
-        'elegant': 'var(--shadow-elegant)',
+        'glow': 'var(--glow-primary)',
+        'glow-subtle': 'var(--glow-subtle)',
+        'elevated': 'var(--shadow-elevated)',
+        'card': 'var(--shadow-card)',
       },
       transitionTimingFunction: {
         'smooth': 'cubic-bezier(0.16, 1, 0.3, 1)',

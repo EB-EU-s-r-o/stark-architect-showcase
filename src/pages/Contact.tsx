@@ -1,75 +1,61 @@
 import Navigation from "@/components/Navigation";
+import { Mail, Github, Linkedin, Twitter, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({ title: "Message sent!", description: "I'll get back to you soon." });
+    setFormData({ name: "", email: "", message: "" });
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Navigation />
-      <section className="pt-32 pb-32 bg-background">
+      <main className="pt-24 pb-20">
         <div className="container mx-auto px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-20">
+          <div className="max-w-4xl mb-20 reveal">
+            <span className="text-mono text-primary text-sm">// GET_IN_TOUCH</span>
+            <h1 className="text-4xl md:text-6xl font-display font-light text-foreground mt-4 text-display">
+              LET'S <span className="text-primary glow-text">CONNECT</span>
+            </h1>
+          </div>
+          <div className="grid lg:grid-cols-2 gap-16">
+            <form onSubmit={handleSubmit} className="space-y-6 reveal-delayed">
               <div>
-                <h1 className="text-minimal text-muted-foreground mb-4">GET IN TOUCH</h1>
-                <h2 className="text-4xl md:text-6xl font-light text-architectural mb-12">
-                  Let's Create Something
-                  <br />
-                  Extraordinary
-                </h2>
-                
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="text-minimal text-muted-foreground mb-2">EMAIL</h3>
-                    <a href="mailto:hello@archstudio.com" className="text-xl hover:text-muted-foreground transition-colors duration-300">
-                      hello@archstudio.com
-                    </a>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-minimal text-muted-foreground mb-2">PHONE</h3>
-                    <a href="tel:+1234567890" className="text-xl hover:text-muted-foreground transition-colors duration-300">
-                      +1 (234) 567-8900
-                    </a>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-minimal text-muted-foreground mb-2">STUDIO</h3>
-                    <address className="text-xl not-italic">
-                      123 Design Avenue
-                      <br />
-                      New York, NY 10001
-                    </address>
-                  </div>
-                </div>
+                <label className="text-mono text-xs text-muted-foreground block mb-2">NAME</label>
+                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="bg-secondary border-border focus:border-primary text-foreground font-mono" required />
               </div>
-              
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-minimal text-muted-foreground mb-6">FOLLOW US</h3>
-                  <div className="space-y-4">
-                    <a href="#" className="block text-xl hover:text-muted-foreground transition-colors duration-300">
-                      Instagram
-                    </a>
-                    <a href="#" className="block text-xl hover:text-muted-foreground transition-colors duration-300">
-                      LinkedIn
-                    </a>
-                    <a href="#" className="block text-xl hover:text-muted-foreground transition-colors duration-300">
-                      Behance
-                    </a>
-                  </div>
-                </div>
-                
-                <div className="pt-12 border-t border-border">
-                  <p className="text-muted-foreground">
-                    We approach each project with curiosity, rigor, and a commitment to excellence. 
-                    Our process begins with listening, understanding your vision, and translating 
-                    it into spaces that exceed expectations.
-                  </p>
-                </div>
+              <div>
+                <label className="text-mono text-xs text-muted-foreground block mb-2">EMAIL</label>
+                <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="bg-secondary border-border focus:border-primary text-foreground font-mono" required />
               </div>
+              <div>
+                <label className="text-mono text-xs text-muted-foreground block mb-2">MESSAGE</label>
+                <Textarea value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} className="bg-secondary border-border focus:border-primary text-foreground font-mono min-h-[150px]" required />
+              </div>
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow">
+                <Send className="w-4 h-4 mr-2" /><span className="text-mono">SEND_MESSAGE</span>
+              </Button>
+            </form>
+            <div className="space-y-4 reveal-delayed-2">
+              {[{ icon: Github, label: "GitHub" }, { icon: Linkedin, label: "LinkedIn" }, { icon: Twitter, label: "Twitter" }, { icon: Mail, label: "Email" }].map((s) => (
+                <a key={s.label} href="#" className="flex items-center gap-4 p-4 bg-card border border-border hover:border-primary/50 hover:text-primary transition-all card-glow">
+                  <s.icon className="w-5 h-5 text-primary" />
+                  <span className="text-mono text-sm text-foreground">{s.label}</span>
+                </a>
+              ))}
             </div>
           </div>
         </div>
-      </section>
+      </main>
     </div>
   );
 };

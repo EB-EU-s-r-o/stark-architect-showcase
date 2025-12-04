@@ -1,70 +1,59 @@
 import Navigation from "@/components/Navigation";
+import { User, Calendar, MapPin, Coffee } from "lucide-react";
 
 const About = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Navigation />
-      <section className="pt-32 pb-32 bg-background">
+      <main className="pt-24 pb-20">
         <div className="container mx-auto px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-20 items-center">
-              <div>
-                <h1 className="text-minimal text-muted-foreground mb-4">ABOUT</h1>
-                <h2 className="text-4xl md:text-6xl font-light text-architectural mb-12">
-                  Design Philosophy
-                </h2>
-                
-                <div className="space-y-8">
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    We believe architecture should enhance human experience while respecting 
-                    the natural environment. Our practice focuses on creating spaces that 
-                    are both functional and poetic.
-                  </p>
-                  
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    Founded in 2015, our studio has completed over 200 projects across 
-                    residential, commercial, and cultural sectors. Each project begins 
-                    with careful listening and ends with thoughtful execution.
-                  </p>
+          <div className="max-w-4xl mb-20 reveal">
+            <span className="text-mono text-primary text-sm">// ABOUT_ME</span>
+            <h1 className="text-4xl md:text-6xl font-display font-light text-foreground mt-4 text-display">
+              THE <span className="text-primary glow-text">DEVELOPER</span>
+            </h1>
+          </div>
+          <div className="grid lg:grid-cols-2 gap-16">
+            <div className="space-y-8 reveal-delayed">
+              <div className="bg-card border border-border p-8 card-glow">
+                <div className="flex items-center gap-3 mb-6">
+                  <User className="w-5 h-5 text-primary" />
+                  <span className="text-mono text-xs text-muted-foreground">BIO</span>
+                </div>
+                <p className="text-muted-foreground font-mono text-sm leading-relaxed">
+                  Full-stack developer with 5+ years of experience building scalable web applications
+                  and cloud infrastructure. Passionate about clean code and exceptional UX.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-card border border-border p-6 card-glow">
+                  <Calendar className="w-5 h-5 text-primary mb-3" />
+                  <div className="text-mono text-xs text-muted-foreground">EXPERIENCE</div>
+                  <div className="text-2xl font-display font-light text-foreground mt-1">5+ Years</div>
+                </div>
+                <div className="bg-card border border-border p-6 card-glow">
+                  <MapPin className="w-5 h-5 text-primary mb-3" />
+                  <div className="text-mono text-xs text-muted-foreground">LOCATION</div>
+                  <div className="text-2xl font-display font-light text-foreground mt-1">Remote</div>
                 </div>
               </div>
-              
-              <div className="space-y-12">
-                <div>
-                  <h3 className="text-minimal text-muted-foreground mb-6">APPROACH</h3>
-                  <div className="space-y-6">
-                    <div className="border-l-2 border-architectural pl-6">
-                      <h4 className="text-lg font-medium mb-2">Research</h4>
-                      <p className="text-muted-foreground">Deep understanding of context, culture, and climate</p>
-                    </div>
-                    <div className="border-l-2 border-architectural pl-6">
-                      <h4 className="text-lg font-medium mb-2">Collaboration</h4>
-                      <p className="text-muted-foreground">Close partnership with clients, engineers, and craftspeople</p>
-                    </div>
-                    <div className="border-l-2 border-architectural pl-6">
-                      <h4 className="text-lg font-medium mb-2">Innovation</h4>
-                      <p className="text-muted-foreground">Sustainable materials and forward-thinking design solutions</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-8 border-t border-border">
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <h3 className="text-minimal text-muted-foreground mb-2">FOUNDED</h3>
-                      <p className="text-xl">2015</p>
-                    </div>
-                    <div>
-                      <h3 className="text-minimal text-muted-foreground mb-2">PROJECTS</h3>
-                      <p className="text-xl">200+</p>
-                    </div>
-                  </div>
-                </div>
+            </div>
+            <div className="bg-card border border-border p-8 card-glow reveal-delayed-2">
+              <div className="flex items-center gap-3 mb-6">
+                <Coffee className="w-5 h-5 text-primary" />
+                <span className="text-mono text-xs text-muted-foreground">SKILLS</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {["React", "TypeScript", "Node.js", "Python", "AWS", "Docker", "PostgreSQL", "GraphQL"].map((skill) => (
+                  <span key={skill} className="text-mono text-xs px-3 py-1.5 bg-secondary border border-border text-muted-foreground hover:border-primary/50 hover:text-primary transition-all">
+                    {skill}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </main>
     </div>
   );
 };
