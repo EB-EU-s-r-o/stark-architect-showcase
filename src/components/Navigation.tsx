@@ -13,6 +13,7 @@ const Navigation = () => {
     { href: "/about", label: "ABOUT" },
     { href: "/contact", label: "CONTACT" },
     { href: "/cloud", label: "CLOUD" },
+    { href: "/builder", label: "BUILDER" },
   ];
 
   const isActive = (href: string) => {
