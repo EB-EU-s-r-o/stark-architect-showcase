@@ -310,8 +310,7 @@ export default function BuilderDemo() {
       });
       const code = extractCodeFromResponse(content);
       const validation = validateJsx(code);
-      if (!validation.ok) {
-        // still apply but flag
+      if (validation.ok === false) {
         toast({
           title: "JSX validation warning",
           description: validation.error.slice(0, 200),
