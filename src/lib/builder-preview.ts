@@ -1,6 +1,20 @@
+import { Parser } from "acorn";
+import jsx from "acorn-jsx";
+
+const JsxParser = Parser.extend(jsx());
+
+export function validateJsx(code: string): { ok: true } | { ok: false; error: string } {
+  try {
+    JsxParser.parse(code, { ecmaVersion: 2020, sourceType: "module" });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export function buildPreviewHtml(code: string, darkMode: boolean = true): string {
   const bg = darkMode ? "bg-slate-950 text-white" : "bg-white text-slate-900";
-  
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,6 +41,32 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true): string
       z-index: 9999;
     }
   </style>
+  <script>
+    // Capture console output and forward to parent
+    (function(){
+      ['log','warn','error','info'].forEach(function(level){
+        var orig = console[level];
+        console[level] = function(){
+          try {
+            var args = Array.prototype.slice.call(arguments).map(function(a){
+              if (a === null) return 'null';
+              if (a === undefined) return 'undefined';
+              if (typeof a === 'object') { try { return JSON.stringify(a); } catch(_) { return String(a); } }
+              return String(a);
+            });
+            parent.postMessage({ type: 'builder-console', level: level, args: args }, '*');
+          } catch(_) {}
+          orig.apply(console, arguments);
+        };
+      });
+      window.addEventListener('error', function(e){
+        parent.postMessage({ type: 'builder-console', level: 'error', args: [e.message] }, '*');
+      });
+      window.addEventListener('unhandledrejection', function(e){
+        parent.postMessage({ type: 'builder-console', level: 'error', args: ['Unhandled: ' + (e.reason && e.reason.message || e.reason)] }, '*');
+      });
+    })();
+  <\/script>
 </head>
 <body class="${bg}">
   <div id="root"></div>
@@ -60,18 +100,14 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true): string
 }
 
 export function extractCodeFromResponse(response: string): string {
-  // Try to find ```jsx or ```tsx or ``` code blocks
   const codeBlockRegex = /```(?:jsx|tsx|javascript|js|react)?\s*\n([\s\S]*?)```/;
   const match = response.match(codeBlockRegex);
-  
-  if (match && match[1]) {
-    return match[1].trim();
-  }
-  
-  // Fallback: if response looks like code (has function/const/import), use it directly
-  if (response.includes('function App') || response.includes('export default') || response.includes('const App')) {
+  if (match && match[1]) return match[1].trim();
+  if (
+    response.includes("function App") ||
+    response.includes("export default") ||
+    response.includes("const App")
+  )
     return response.trim();
-  }
-  
   return response.trim();
 }
