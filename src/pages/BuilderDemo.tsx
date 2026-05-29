@@ -69,7 +69,7 @@ export default function BuilderDemo() {
       id: "1",
       role: "assistant",
       content:
-        "👋 Vitaj! Vyber model (Gemini ready, Mistral cez secret/BYOK) a popíš čo postaviť. Skús: *„Pricing card s monthly/yearly toggle"*",
+        '👋 Vitaj! Vyber model (Gemini ready, Mistral cez secret/BYOK) a popíš čo postaviť. Skús: *„Pricing card s monthly/yearly toggle"*',
     },
   ]);
   const [input, setInput] = useState("");
