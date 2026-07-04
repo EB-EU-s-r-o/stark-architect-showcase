@@ -12,8 +12,14 @@ export function validateJsx(code: string): { ok: true } | { ok: false; error: st
   }
 }
 
-export function buildPreviewHtml(code: string, darkMode: boolean = true): string {
+export interface PreviewOpts {
+  darkMode?: boolean;
+  inspectorMode?: boolean;
+}
+
+export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: PreviewOpts = {}): string {
   const bg = darkMode ? "bg-slate-950 text-white" : "bg-white text-slate-900";
+  const inspector = opts.inspectorMode ? INSPECTOR_SCRIPT : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -28,21 +34,11 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true): string
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { min-height: 100vh; }
     #root { min-height: 100vh; }
-    #error-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.85);
-      color: #ff6b6b;
-      padding: 2rem;
-      font-family: monospace;
-      font-size: 14px;
-      white-space: pre-wrap;
-      overflow: auto;
-      z-index: 9999;
-    }
+    #error-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: #ff6b6b; padding: 2rem; font-family: monospace; font-size: 14px; white-space: pre-wrap; overflow: auto; z-index: 9999; }
+    .__builder-hover { outline: 2px dashed #00e5ff !important; outline-offset: 2px; cursor: crosshair !important; }
+    .__builder-selected { outline: 2px solid #00e5ff !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(0,229,255,0.2) !important; }
   </style>
   <script>
-    // Capture console output and forward to parent
     (function(){
       ['log','warn','error','info'].forEach(function(level){
         var orig = console[level];
@@ -73,10 +69,8 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true): string
   <div id="error-overlay"></div>
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext } = React;
-
     try {
       ${code}
-
       if (typeof App !== 'undefined') {
         ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
       }
@@ -87,17 +81,40 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true): string
       window.parent.postMessage({ type: 'preview-error', error: e.message }, '*');
     }
   <\/script>
-  <script>
-    window.onerror = function(msg, src, line, col, err) {
-      const overlay = document.getElementById('error-overlay');
-      overlay.style.display = 'block';
-      overlay.textContent = '⚠️ Runtime Error:\\n\\n' + msg + '\\nLine: ' + line;
-      window.parent.postMessage({ type: 'preview-error', error: msg }, '*');
-    };
-  <\/script>
+  ${inspector}
 </body>
 </html>`;
 }
+
+const INSPECTOR_SCRIPT = `<script>
+  (function(){
+    let hovered = null;
+    let selected = null;
+    function describe(el){
+      return {
+        tag: el.tagName.toLowerCase(),
+        classes: (el.className && typeof el.className === 'string') ? el.className : '',
+        text: (el.innerText || '').slice(0, 120),
+        id: el.id || '',
+      };
+    }
+    document.addEventListener('mouseover', function(e){
+      if (hovered) hovered.classList.remove('__builder-hover');
+      hovered = e.target;
+      if (hovered && hovered.id !== 'root') hovered.classList.add('__builder-hover');
+    }, true);
+    document.addEventListener('mouseout', function(){
+      if (hovered) hovered.classList.remove('__builder-hover');
+    }, true);
+    document.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if (selected) selected.classList.remove('__builder-selected');
+      selected = e.target;
+      selected.classList.add('__builder-selected');
+      parent.postMessage({ type: 'builder-select', el: describe(selected) }, '*');
+    }, true);
+  })();
+<\/script>`;
 
 export function extractCodeFromResponse(response: string): string {
   const codeBlockRegex = /```(?:jsx|tsx|javascript|js|react)?\s*\n([\s\S]*?)```/;
