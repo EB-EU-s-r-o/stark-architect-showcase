@@ -296,6 +296,11 @@ export default function BuilderDemo() {
     setInput(""); setAttachedImage(null);
     setIsStreaming(true); setPreviewError(null); setTokenCount(0); setLatencyMs(null);
 
+    if (image && isMistral) {
+      toast({ title: "Vision → Gemini", description: "Mistral vision nie je podporovaný, prepínam na Gemini pre tento prompt." });
+    }
+    const modelForCall = image && isMistral ? "google/gemini-2.5-flash" : model;
+
     // Detect target route from prompt
     const detected = detectRouteFromPrompt(promptText);
     const targetRoute = detected && detected !== activeRoute && !routes[detected] ? detected : activeRoute;
