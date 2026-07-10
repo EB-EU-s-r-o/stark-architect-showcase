@@ -476,6 +476,11 @@ export default function BuilderDemo() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Mobile chat/preview switcher */}
+            <div className="md:hidden flex items-center rounded-md bg-muted/40 p-0.5 mr-1">
+              <button onClick={() => setMobileView("chat")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>CHAT</button>
+              <button onClick={() => setMobileView("preview")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>PREVIEW</button>
+            </div>
             <BuilderModelPicker model={model} onChange={setModel} hasMistralKey={hasMistralKey} byokActive={!!byokKey} />
             <BuilderSettings
               preset={preset} onPresetChange={setPreset}
