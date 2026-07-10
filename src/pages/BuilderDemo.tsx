@@ -336,13 +336,13 @@ export default function BuilderDemo() {
       applyGeneration(targetRoute, code, promptText, usage!, fallbackFrom ? { fallbackFrom } : {});
       if (!image) {
         try {
-          const key = await makeKey({ model: useModel, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt });
+          const key = await makeKey({ model: useModel, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt, byokHint: byokKey });
           cachePut({ key, code, model: useModel, promptTokens: usage!.promptTokens, completionTokens: usage!.completionTokens, latencyMs: usage!.latencyMs, timestamp: Date.now() });
         } catch {}
       }
     };
 
-    try { await tryStream(model); }
+    try { await tryStream(modelForCall); }
     catch (e: unknown) {
       if ((e as Error).name === "AbortError") {
         setMessages((p) => p.filter((m) => m.id !== "streaming"));
