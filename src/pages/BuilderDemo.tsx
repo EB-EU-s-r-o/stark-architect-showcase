@@ -727,6 +727,9 @@ export default function BuilderDemo() {
           </Tabs>
         </main>
       </div>
+
+      <BuilderPublishSheet open={publishOpen} onOpenChange={setPublishOpen} onExport={handleExport} />
     </div>
   );
 }
+
