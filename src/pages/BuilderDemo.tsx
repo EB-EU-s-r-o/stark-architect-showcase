@@ -498,7 +498,11 @@ export default function BuilderDemo() {
         {/* CHAT PANEL */}
         <motion.aside
           animate={{ width: sidebarCollapsed ? 0 : 400 }}
-          className="border-r border-border/50 bg-background/40 backdrop-blur-sm flex flex-col overflow-hidden shrink-0"
+          className={cn(
+            "border-r border-border/50 bg-background/40 backdrop-blur-sm flex flex-col overflow-hidden shrink-0",
+            "md:flex",
+            mobileView === "chat" ? "flex absolute inset-0 z-30 md:relative md:z-auto md:!w-[400px]" : "hidden md:flex"
+          )}
         >
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
