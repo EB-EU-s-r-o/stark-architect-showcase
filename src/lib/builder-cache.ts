@@ -25,8 +25,10 @@ export async function makeKey(parts: {
   prompt: string;
   preset: string;
   customSystemPrompt?: string;
+  byokHint?: string;
 }): Promise<string> {
-  const raw = `${parts.model}|${parts.preset}|${parts.customSystemPrompt ?? ""}|${parts.prompt}`;
+  const byok = parts.byokHint ? parts.byokHint.slice(-6) : "";
+  const raw = `${parts.model}|${parts.preset}|${parts.customSystemPrompt ?? ""}|${byok}|${parts.prompt}`;
   return await sha256(raw);
 }
 
