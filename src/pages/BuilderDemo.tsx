@@ -655,12 +655,15 @@ export default function BuilderDemo() {
             </div>
 
             <TabsContent value="preview" className="flex-1 min-h-0 m-0 relative">
-              <div className="w-full h-full p-6 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(0,229,255,0.06),_transparent_60%)]"
+              <div className="w-full h-full p-6 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(0,229,255,0.06),_transparent_60%)] overflow-auto"
                 style={{
                   backgroundImage: `linear-gradient(rgba(0,229,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.04) 1px,transparent 1px)`,
                   backgroundSize: "24px 24px",
                 }}>
-                <div className={cn("overflow-hidden bg-slate-950 relative", deviceFrame)}>
+                <div
+                  className={cn("overflow-hidden bg-slate-950 relative transition-transform", deviceFrame)}
+                  style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
+                >
                   <iframe
                     key={previewKey}
                     srcDoc={previewHtml}
@@ -671,15 +674,28 @@ export default function BuilderDemo() {
                   />
                 </div>
               </div>
-              <BuilderFloatingToolbar tool={tool} onChange={setTool} />
-              {tool === "annotate" && (
-                <div className="absolute inset-6 pointer-events-none border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center">
-                  <span className="text-xs font-mono text-primary bg-background/80 px-2 py-1 rounded">Annotate mode — coming soon</span>
-                </div>
-              )}
-              {tool === "comment" && (
-                <div className="absolute inset-6 pointer-events-none border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center">
-                  <span className="text-xs font-mono text-primary bg-background/80 px-2 py-1 rounded">Comment pins — coming soon</span>
+
+              {/* Zoom controls */}
+              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-10">
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.max(25, z - 25))} title="Zoom out">
+                  <ZoomOut className="w-3 h-3" />
+                </Button>
+                <span className="text-[10px] font-mono w-8 text-center">{zoom}%</span>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.min(200, z + 25))} title="Zoom in">
+                  <ZoomIn className="w-3 h-3" />
+                </Button>
+              </div>
+
+              <BuilderFloatingToolbar tool={tool} onChange={(t) => { setTool(t); if (t !== "select") setSelectedEl(null); }} />
+              <BuilderOverlay
+                mode={tool === "annotate" ? "annotate" : tool === "comment" ? "comment" : "none"}
+                pins={pins}
+                onPinsChange={setPins}
+                onSendComments={handleSendComments}
+              />
+              {tool === "text" && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-[10px] font-mono text-primary z-10 pointer-events-none">
+                  DOUBLE-CLICK any text to edit inline
                 </div>
               )}
             </TabsContent>
