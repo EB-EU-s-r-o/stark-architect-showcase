@@ -146,10 +146,33 @@ export default function BuilderDemo() {
         });
       } else if (e.data?.type === "builder-select") {
         setSelectedEl(e.data.el);
+      } else if (e.data?.type === "builder-text-edit") {
+        const { from, to } = e.data as { from: string; to: string };
+        if (from && to && from !== to) {
+          const patched = (routes[activeRoute] || "").split(from).join(to);
+          if (patched !== routes[activeRoute]) {
+            setCodeForRoute(activeRoute, patched);
+            toast({ title: "Text upravený", description: `"${from.slice(0, 30)}" → "${to.slice(0, 30)}"` });
+          } else {
+            toast({ title: "Text nenájdený v kóde", description: "Použiť Ask AI namiesto inline edit.", variant: "destructive" });
+          }
+        }
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
+  }, [routes, activeRoute, toast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      if (e.key === "/") { e.preventDefault(); setSidebarCollapsed((v) => !v); }
+      else if (e.key.toLowerCase() === "r" && e.shiftKey) { e.preventDefault(); setPreviewKey((k) => k + 1); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, []);
 
   const streamChat = useCallback(async (
