@@ -15,11 +15,13 @@ export function validateJsx(code: string): { ok: true } | { ok: false; error: st
 export interface PreviewOpts {
   darkMode?: boolean;
   inspectorMode?: boolean;
+  textEditMode?: boolean;
 }
 
 export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: PreviewOpts = {}): string {
   const bg = darkMode ? "bg-slate-950 text-white" : "bg-white text-slate-900";
   const inspector = opts.inspectorMode ? INSPECTOR_SCRIPT : "";
+  const textEdit = opts.textEditMode ? TEXT_EDIT_SCRIPT : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
