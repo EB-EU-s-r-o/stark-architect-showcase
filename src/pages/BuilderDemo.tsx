@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Sparkles, Copy, Check, Loader2, Square, Wand2, AlertTriangle,
-  ChevronLeft, ChevronRight, ImagePlus, X, History, Code2, Eye, Terminal, GitCompare,
+  ChevronLeft, ChevronRight, ImagePlus, X, History, Code2, Eye, Terminal, GitCompare, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,6 +23,8 @@ import BuilderRouteBar from "@/components/builder/BuilderRouteBar";
 import BuilderFloatingToolbar, { type BuilderTool } from "@/components/builder/BuilderFloatingToolbar";
 import BuilderVersions from "@/components/builder/BuilderVersions";
 import BuilderDiffView from "@/components/builder/BuilderDiffView";
+import BuilderOverlay, { type Pin } from "@/components/builder/BuilderOverlay";
+import BuilderPublishSheet from "@/components/builder/BuilderPublishSheet";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
