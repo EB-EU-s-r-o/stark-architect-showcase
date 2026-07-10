@@ -15,11 +15,13 @@ export function validateJsx(code: string): { ok: true } | { ok: false; error: st
 export interface PreviewOpts {
   darkMode?: boolean;
   inspectorMode?: boolean;
+  textEditMode?: boolean;
 }
 
 export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: PreviewOpts = {}): string {
   const bg = darkMode ? "bg-slate-950 text-white" : "bg-white text-slate-900";
   const inspector = opts.inspectorMode ? INSPECTOR_SCRIPT : "";
+  const textEdit = opts.textEditMode ? TEXT_EDIT_SCRIPT : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -82,6 +84,7 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: P
     }
   <\/script>
   ${inspector}
+  ${textEdit}
 </body>
 </html>`;
 }
@@ -115,6 +118,47 @@ const INSPECTOR_SCRIPT = `<script>
     }, true);
   })();
 <\/script>`;
+
+const TEXT_EDIT_SCRIPT = `<script>
+  (function(){
+    function isTextNode(el){
+      if (!el || !el.childNodes) return false;
+      if (el.childNodes.length === 0) return false;
+      for (var i=0;i<el.childNodes.length;i++){
+        if (el.childNodes[i].nodeType !== 3) return false;
+      }
+      return (el.innerText || '').trim().length > 0;
+    }
+    document.addEventListener('mouseover', function(e){
+      if (isTextNode(e.target)) e.target.style.outline = '1px dashed #00e5ff';
+    }, true);
+    document.addEventListener('mouseout', function(e){
+      if (e.target && e.target.style) e.target.style.outline = '';
+    }, true);
+    document.addEventListener('dblclick', function(e){
+      if (!isTextNode(e.target)) return;
+      e.preventDefault();
+      var el = e.target;
+      var original = el.innerText;
+      el.setAttribute('contenteditable','true');
+      el.focus();
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      function commit(){
+        el.removeAttribute('contenteditable');
+        el.removeEventListener('blur', commit);
+        var next = el.innerText;
+        if (next !== original) {
+          parent.postMessage({ type: 'builder-text-edit', from: original, to: next }, '*');
+        }
+      }
+      el.addEventListener('blur', commit);
+    }, true);
+  })();
+<\/script>`;
+
 
 export function extractCodeFromResponse(response: string): string {
   const codeBlockRegex = /```(?:jsx|tsx|javascript|js|react)?\s*\n([\s\S]*?)```/;

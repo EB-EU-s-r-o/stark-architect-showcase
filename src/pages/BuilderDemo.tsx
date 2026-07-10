@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Sparkles, Copy, Check, Loader2, Square, Wand2, AlertTriangle,
-  ChevronLeft, ChevronRight, ImagePlus, X, History, Code2, Eye, Terminal, GitCompare,
+  ChevronLeft, ChevronRight, ImagePlus, X, History, Code2, Eye, Terminal, GitCompare, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,6 +23,8 @@ import BuilderRouteBar from "@/components/builder/BuilderRouteBar";
 import BuilderFloatingToolbar, { type BuilderTool } from "@/components/builder/BuilderFloatingToolbar";
 import BuilderVersions from "@/components/builder/BuilderVersions";
 import BuilderDiffView from "@/components/builder/BuilderDiffView";
+import BuilderOverlay, { type Pin } from "@/components/builder/BuilderOverlay";
+import BuilderPublishSheet from "@/components/builder/BuilderPublishSheet";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -111,6 +113,15 @@ export default function BuilderDemo() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // NEW: comments, zoom, publish, mobile chat tab
+  const [pins, setPins] = useState<Pin[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem("builder-pins") || "[]"); } catch { return []; }
+  });
+  const [zoom, setZoom] = useState(100);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"chat" | "preview">("preview");
+  useEffect(() => { try { sessionStorage.setItem("builder-pins", JSON.stringify(pins)); } catch {} }, [pins]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const consoleIdRef = useRef(0);
@@ -135,10 +146,33 @@ export default function BuilderDemo() {
         });
       } else if (e.data?.type === "builder-select") {
         setSelectedEl(e.data.el);
+      } else if (e.data?.type === "builder-text-edit") {
+        const { from, to } = e.data as { from: string; to: string };
+        if (from && to && from !== to) {
+          const patched = (routes[activeRoute] || "").split(from).join(to);
+          if (patched !== routes[activeRoute]) {
+            setCodeForRoute(activeRoute, patched);
+            toast({ title: "Text upravený", description: `"${from.slice(0, 30)}" → "${to.slice(0, 30)}"` });
+          } else {
+            toast({ title: "Text nenájdený v kóde", description: "Použiť Ask AI namiesto inline edit.", variant: "destructive" });
+          }
+        }
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
+  }, [routes, activeRoute, toast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      if (e.key === "/") { e.preventDefault(); setSidebarCollapsed((v) => !v); }
+      else if (e.key.toLowerCase() === "r" && e.shiftKey) { e.preventDefault(); setPreviewKey((k) => k + 1); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, []);
 
   const streamChat = useCallback(async (
@@ -262,6 +296,11 @@ export default function BuilderDemo() {
     setInput(""); setAttachedImage(null);
     setIsStreaming(true); setPreviewError(null); setTokenCount(0); setLatencyMs(null);
 
+    if (image && isMistral) {
+      toast({ title: "Vision → Gemini", description: "Mistral vision nie je podporovaný, prepínam na Gemini pre tento prompt." });
+    }
+    const modelForCall = image && isMistral ? "google/gemini-2.5-flash" : model;
+
     // Detect target route from prompt
     const detected = detectRouteFromPrompt(promptText);
     const targetRoute = detected && detected !== activeRoute && !routes[detected] ? detected : activeRoute;
@@ -273,7 +312,7 @@ export default function BuilderDemo() {
     // Cache lookup (skip when image attached — vision is not deterministic-ish)
     if (!image) {
       try {
-        const key = await makeKey({ model, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt });
+        const key = await makeKey({ model: modelForCall, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt, byokHint: byokKey });
         const hit = cacheGet(key);
         if (hit) {
           const usage: Usage = { promptTokens: hit.promptTokens, completionTokens: hit.completionTokens, model: hit.model, latencyMs: hit.latencyMs };
@@ -297,13 +336,13 @@ export default function BuilderDemo() {
       applyGeneration(targetRoute, code, promptText, usage!, fallbackFrom ? { fallbackFrom } : {});
       if (!image) {
         try {
-          const key = await makeKey({ model: useModel, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt });
+          const key = await makeKey({ model: useModel, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt, byokHint: byokKey });
           cachePut({ key, code, model: useModel, promptTokens: usage!.promptTokens, completionTokens: usage!.completionTokens, latencyMs: usage!.latencyMs, timestamp: Date.now() });
         } catch {}
       }
     };
 
-    try { await tryStream(model); }
+    try { await tryStream(modelForCall); }
     catch (e: unknown) {
       if ((e as Error).name === "AbortError") {
         setMessages((p) => p.filter((m) => m.id !== "streaming"));
@@ -375,7 +414,7 @@ export default function BuilderDemo() {
   };
 
   const previewHtml = useMemo(
-    () => buildPreviewHtml(currentCode, darkPreview, { inspectorMode: tool === "select" }),
+    () => buildPreviewHtml(currentCode, darkPreview, { inspectorMode: tool === "select", textEditMode: tool === "text" }),
     [currentCode, darkPreview, tool]
   );
 
@@ -386,13 +425,23 @@ export default function BuilderDemo() {
 
   const handleCopy = () => { navigator.clipboard.writeText(currentCode); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   const handleExport = () => exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`);
-  const handlePublish = () => toast({ title: "Publish", description: "Export ZIP a nahraj napr. na Vercel / Netlify — jeden statický HTML." });
+  const handlePublish = () => setPublishOpen(true);
 
   const handleRestoreVersion = (v: Version) => {
-    setCodeForRoute(v.route, v.code);
+    setPreviousCode(currentCode);
+    setRoutes((r) => ({ ...r, [v.route]: v.code }));
     if (v.route !== activeRoute) setActiveRoute(v.route);
     setPreviewKey((k) => k + 1);
-    toast({ title: "Verzia obnovená" });
+    toast({ title: "Verzia obnovená", description: new Date(v.timestamp).toLocaleTimeString() });
+  };
+
+  const handleSendComments = async () => {
+    if (!pins.length || isStreaming) return;
+    const batch = pins.map((p, i) => `${i + 1}. [${Math.round(p.x)},${Math.round(p.y)}] ${p.text || "(no text)"}`).join("\n");
+    setInput(`Aplikuj tieto komentáre na aktuálny komponent:\n${batch}`);
+    setPins([]);
+    setTool("none");
+    toast({ title: "Komentáre v composeri", description: "Skontroluj a stlač Send." });
   };
 
   const routeList = Object.keys(routes);
@@ -427,6 +476,11 @@ export default function BuilderDemo() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Mobile chat/preview switcher */}
+            <div className="md:hidden flex items-center rounded-md bg-muted/40 p-0.5 mr-1">
+              <button onClick={() => setMobileView("chat")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>CHAT</button>
+              <button onClick={() => setMobileView("preview")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>PREVIEW</button>
+            </div>
             <BuilderModelPicker model={model} onChange={setModel} hasMistralKey={hasMistralKey} byokActive={!!byokKey} />
             <BuilderSettings
               preset={preset} onPresetChange={setPreset}
@@ -444,7 +498,11 @@ export default function BuilderDemo() {
         {/* CHAT PANEL */}
         <motion.aside
           animate={{ width: sidebarCollapsed ? 0 : 400 }}
-          className="border-r border-border/50 bg-background/40 backdrop-blur-sm flex flex-col overflow-hidden shrink-0"
+          className={cn(
+            "border-r border-border/50 bg-background/40 backdrop-blur-sm flex flex-col overflow-hidden shrink-0",
+            "md:flex",
+            mobileView === "chat" ? "flex absolute inset-0 z-30 md:relative md:z-auto md:!w-[400px]" : "hidden md:flex"
+          )}
         >
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -557,7 +615,7 @@ export default function BuilderDemo() {
         </button>
 
         {/* MAIN CANVAS */}
-        <main className="flex-1 flex flex-col min-w-0 bg-background">
+        <main className={cn("flex-1 flex flex-col min-w-0 bg-background", mobileView === "chat" ? "hidden md:flex" : "flex")}>
           <BuilderRouteBar
             routes={routeList} route={activeRoute} onRouteChange={setActiveRoute}
             onAddRoute={handleAddRoute}
@@ -606,12 +664,15 @@ export default function BuilderDemo() {
             </div>
 
             <TabsContent value="preview" className="flex-1 min-h-0 m-0 relative">
-              <div className="w-full h-full p-6 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(0,229,255,0.06),_transparent_60%)]"
+              <div className="w-full h-full p-6 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(0,229,255,0.06),_transparent_60%)] overflow-auto"
                 style={{
                   backgroundImage: `linear-gradient(rgba(0,229,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.04) 1px,transparent 1px)`,
                   backgroundSize: "24px 24px",
                 }}>
-                <div className={cn("overflow-hidden bg-slate-950 relative", deviceFrame)}>
+                <div
+                  className={cn("overflow-hidden bg-slate-950 relative transition-transform", deviceFrame)}
+                  style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
+                >
                   <iframe
                     key={previewKey}
                     srcDoc={previewHtml}
@@ -622,15 +683,28 @@ export default function BuilderDemo() {
                   />
                 </div>
               </div>
-              <BuilderFloatingToolbar tool={tool} onChange={setTool} />
-              {tool === "annotate" && (
-                <div className="absolute inset-6 pointer-events-none border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center">
-                  <span className="text-xs font-mono text-primary bg-background/80 px-2 py-1 rounded">Annotate mode — coming soon</span>
-                </div>
-              )}
-              {tool === "comment" && (
-                <div className="absolute inset-6 pointer-events-none border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center">
-                  <span className="text-xs font-mono text-primary bg-background/80 px-2 py-1 rounded">Comment pins — coming soon</span>
+
+              {/* Zoom controls */}
+              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-10">
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.max(25, z - 25))} title="Zoom out">
+                  <ZoomOut className="w-3 h-3" />
+                </Button>
+                <span className="text-[10px] font-mono w-8 text-center">{zoom}%</span>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.min(200, z + 25))} title="Zoom in">
+                  <ZoomIn className="w-3 h-3" />
+                </Button>
+              </div>
+
+              <BuilderFloatingToolbar tool={tool} onChange={(t) => { setTool(t); if (t !== "select") setSelectedEl(null); }} />
+              <BuilderOverlay
+                mode={tool === "annotate" ? "annotate" : tool === "comment" ? "comment" : "none"}
+                pins={pins}
+                onPinsChange={setPins}
+                onSendComments={handleSendComments}
+              />
+              {tool === "text" && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-[10px] font-mono text-primary z-10 pointer-events-none">
+                  DOUBLE-CLICK any text to edit inline
                 </div>
               )}
             </TabsContent>
@@ -653,6 +727,9 @@ export default function BuilderDemo() {
           </Tabs>
         </main>
       </div>
+
+      <BuilderPublishSheet open={publishOpen} onOpenChange={setPublishOpen} onExport={handleExport} />
     </div>
   );
 }
+
