@@ -113,6 +113,15 @@ export default function BuilderDemo() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // NEW: comments, zoom, publish, mobile chat tab
+  const [pins, setPins] = useState<Pin[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem("builder-pins") || "[]"); } catch { return []; }
+  });
+  const [zoom, setZoom] = useState(100);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"chat" | "preview">("preview");
+  useEffect(() => { try { sessionStorage.setItem("builder-pins", JSON.stringify(pins)); } catch {} }, [pins]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const consoleIdRef = useRef(0);
