@@ -84,6 +84,7 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: P
     }
   <\/script>
   ${inspector}
+  ${textEdit}
 </body>
 </html>`;
 }
