@@ -312,7 +312,7 @@ export default function BuilderDemo() {
     // Cache lookup (skip when image attached — vision is not deterministic-ish)
     if (!image) {
       try {
-        const key = await makeKey({ model, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt });
+        const key = await makeKey({ model: modelForCall, prompt: promptText, preset: `${preset}|${targetRoute}|${(routes[targetRoute] || "").slice(0, 200)}`, customSystemPrompt, byokHint: byokKey });
         const hit = cacheGet(key);
         if (hit) {
           const usage: Usage = { promptTokens: hit.promptTokens, completionTokens: hit.completionTokens, model: hit.model, latencyMs: hit.latencyMs };
