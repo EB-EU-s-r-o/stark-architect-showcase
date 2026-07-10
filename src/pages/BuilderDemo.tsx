@@ -615,7 +615,7 @@ export default function BuilderDemo() {
         </button>
 
         {/* MAIN CANVAS */}
-        <main className="flex-1 flex flex-col min-w-0 bg-background">
+        <main className={cn("flex-1 flex flex-col min-w-0 bg-background", mobileView === "chat" ? "hidden md:flex" : "flex")}>
           <BuilderRouteBar
             routes={routeList} route={activeRoute} onRouteChange={setActiveRoute}
             onAddRoute={handleAddRoute}
