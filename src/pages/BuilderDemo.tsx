@@ -414,7 +414,7 @@ export default function BuilderDemo() {
   };
 
   const previewHtml = useMemo(
-    () => buildPreviewHtml(currentCode, darkPreview, { inspectorMode: tool === "select" }),
+    () => buildPreviewHtml(currentCode, darkPreview, { inspectorMode: tool === "select", textEditMode: tool === "text" }),
     [currentCode, darkPreview, tool]
   );
 
@@ -425,13 +425,23 @@ export default function BuilderDemo() {
 
   const handleCopy = () => { navigator.clipboard.writeText(currentCode); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   const handleExport = () => exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`);
-  const handlePublish = () => toast({ title: "Publish", description: "Export ZIP a nahraj napr. na Vercel / Netlify — jeden statický HTML." });
+  const handlePublish = () => setPublishOpen(true);
 
   const handleRestoreVersion = (v: Version) => {
-    setCodeForRoute(v.route, v.code);
+    setPreviousCode(currentCode);
+    setRoutes((r) => ({ ...r, [v.route]: v.code }));
     if (v.route !== activeRoute) setActiveRoute(v.route);
     setPreviewKey((k) => k + 1);
-    toast({ title: "Verzia obnovená" });
+    toast({ title: "Verzia obnovená", description: new Date(v.timestamp).toLocaleTimeString() });
+  };
+
+  const handleSendComments = async () => {
+    if (!pins.length || isStreaming) return;
+    const batch = pins.map((p, i) => `${i + 1}. [${Math.round(p.x)},${Math.round(p.y)}] ${p.text || "(no text)"}`).join("\n");
+    setInput(`Aplikuj tieto komentáre na aktuálny komponent:\n${batch}`);
+    setPins([]);
+    setTool("none");
+    toast({ title: "Komentáre v composeri", description: "Skontroluj a stlač Send." });
   };
 
   const routeList = Object.keys(routes);
