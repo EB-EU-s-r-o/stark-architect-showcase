@@ -685,7 +685,7 @@ export default function BuilderDemo() {
               </div>
 
               {/* Zoom controls */}
-              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-10">
+              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-40">
                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.max(25, z - 25))} title="Zoom out">
                   <ZoomOut className="w-3 h-3" />
                 </Button>
