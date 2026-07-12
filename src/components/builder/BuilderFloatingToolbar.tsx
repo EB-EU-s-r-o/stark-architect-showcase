@@ -14,7 +14,7 @@ const TOOLS: { id: BuilderTool; icon: typeof MousePointer2; label: string }[] = 
 
 export default function BuilderFloatingToolbar({ tool, onChange }: Props) {
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 rounded-full bg-background/90 backdrop-blur-xl border border-primary/30 shadow-[0_0_30px_rgba(0,229,255,0.15)] z-20">
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 rounded-full bg-background/90 backdrop-blur-xl border border-primary/30 shadow-[0_0_30px_rgba(0,229,255,0.15)] z-40">
       {TOOLS.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
