@@ -425,8 +425,24 @@ export default function BuilderDemo() {
   };
 
   const handleCopy = () => { navigator.clipboard.writeText(currentCode); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const handleExport = () => exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`);
+  const handleExport = () => {
+    const staged = window.confirm(
+      "Export staged preview?\n\nOK = zabaliť s animovaným staged wrapperom (progressive reveal, kompaktný container).\nCancel = klasický full-page export."
+    );
+    exportBundle(
+      currentCode,
+      `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`,
+      { staged }
+    );
+    toast({ title: staged ? "Export: staged" : "Export: full-page" });
+  };
   const handlePublish = () => setPublishOpen(true);
+
+  const handleRetryPreview = () => {
+    setPreviewError(null);
+    setConsoleEntries((prev) => prev.filter((c) => c.level !== "error"));
+    setPreviewKey((k) => k + 1);
+  };
 
   const handleRestoreVersion = (v: Version) => {
     setPreviousCode(currentCode);
@@ -673,6 +689,9 @@ export default function BuilderDemo() {
                 deviceFrame={deviceFrame}
                 route={activeRoute}
                 onIframeLoad={() => setPreviewError(null)}
+                error={previewError}
+                onRetry={handleRetryPreview}
+                onFixWithAi={handleFixWithAi}
               />
 
 

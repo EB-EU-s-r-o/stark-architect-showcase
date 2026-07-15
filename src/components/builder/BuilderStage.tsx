@@ -1,4 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -9,14 +11,19 @@ interface Props {
   deviceFrame: string;
   route: string;
   onIframeLoad: () => void;
+  error?: string | null;
+  onRetry?: () => void;
+  onFixWithAi?: () => void;
 }
 
 /**
  * Preview "stage" — locks the generated app inside a compact card sitting on a
- * grid backdrop, with staggered reveal + shimmer skeleton while streaming.
+ * grid backdrop, with staggered reveal + shimmer skeleton while streaming, and
+ * a clear error overlay + retry button when the iframe build fails.
  */
 export default function BuilderStage({
   html, previewKey, isStreaming, zoom, deviceFrame, route, onIframeLoad,
+  error, onRetry, onFixWithAi,
 }: Props) {
   return (
     <div
@@ -77,7 +84,7 @@ export default function BuilderStage({
 
           {/* Streaming skeleton overlay */}
           <AnimatePresence>
-            {isStreaming && (
+            {isStreaming && !error && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -111,6 +118,44 @@ export default function BuilderStage({
                   streaming component…
                 </div>
                 <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Error overlay */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-sm"
+              >
+                <div className="max-w-md w-full rounded-xl border border-destructive/50 bg-destructive/10 p-4 space-y-3 shadow-[0_0_30px_-5px_rgba(255,80,80,0.35)]">
+                  <div className="flex items-center gap-2 text-destructive font-mono text-xs font-semibold">
+                    <AlertTriangle className="w-4 h-4" />
+                    PREVIEW BUILD FAILED
+                  </div>
+                  <pre className="text-[11px] font-mono text-destructive/90 whitespace-pre-wrap break-words max-h-40 overflow-auto">
+{error}
+                  </pre>
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    // JSX sa nepodarilo vyrenderovať. Skús retry alebo nechaj AI opraviť kód.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                    {onRetry && (
+                      <Button size="sm" variant="secondary" onClick={onRetry} className="h-7 gap-1 flex-1">
+                        <RotateCw className="w-3 h-3" /> Retry
+                      </Button>
+                    )}
+                    {onFixWithAi && (
+                      <Button size="sm" variant="destructive" onClick={onFixWithAi} className="h-7 gap-1 flex-1">
+                        <AlertTriangle className="w-3 h-3" /> Fix with AI
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
