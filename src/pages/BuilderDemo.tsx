@@ -25,6 +25,7 @@ import BuilderVersions from "@/components/builder/BuilderVersions";
 import BuilderDiffView from "@/components/builder/BuilderDiffView";
 import BuilderOverlay, { type Pin } from "@/components/builder/BuilderOverlay";
 import BuilderPublishSheet from "@/components/builder/BuilderPublishSheet";
+import BuilderStage from "@/components/builder/BuilderStage";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
