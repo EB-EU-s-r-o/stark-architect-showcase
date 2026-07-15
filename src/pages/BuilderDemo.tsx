@@ -448,9 +448,9 @@ export default function BuilderDemo() {
   const hasMistralKey = MODELS.some((m) => m.provider === "mistral");
 
   const deviceFrame = {
-    mobile: "w-[390px] h-[680px] rounded-[2.2rem] border-[10px] border-slate-800 shadow-[0_0_40px_rgba(0,229,255,0.15)]",
-    tablet: "w-[820px] h-[560px] rounded-[1.5rem] border-[8px] border-slate-800 shadow-[0_0_40px_rgba(0,229,255,0.12)]",
-    desktop: "w-full h-full rounded-xl border border-primary/20 shadow-[0_0_50px_rgba(0,229,255,0.08)]",
+    mobile: "w-[390px] h-[680px] max-h-[72vh]",
+    tablet: "w-[820px] h-[560px] max-h-[72vh]",
+    desktop: "w-full max-w-[960px] h-[640px] max-h-[72vh]",
   }[device];
 
   return (
