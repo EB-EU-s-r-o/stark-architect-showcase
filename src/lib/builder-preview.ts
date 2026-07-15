@@ -16,12 +16,54 @@ export interface PreviewOpts {
   darkMode?: boolean;
   inspectorMode?: boolean;
   textEditMode?: boolean;
+  /** Wrap generated App in a compact staged container with progressive reveal. Default true. Disable for exports. */
+  staged?: boolean;
 }
 
 export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: PreviewOpts = {}): string {
   const bg = darkMode ? "bg-slate-950 text-white" : "bg-white text-slate-900";
   const inspector = opts.inspectorMode ? INSPECTOR_SCRIPT : "";
   const textEdit = opts.textEditMode ? TEXT_EDIT_SCRIPT : "";
+  const staged = opts.staged !== false;
+
+  const stageCss = staged
+    ? `
+    html, body { min-height: 0 !important; }
+    body { padding: 0; }
+    #root { min-height: 0; }
+    .builder-stage {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 18px 28px;
+    }
+    /* neutralize generated full-viewport layouts so the app lives inside its card */
+    .builder-stage :is([class*="min-h-screen"], [class*="h-screen"]) {
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    /* progressive reveal: top-level chunks pop in staggered */
+    @keyframes builder-pop {
+      from { opacity: 0; transform: translateY(8px) scale(0.985); filter: blur(2px); }
+      to   { opacity: 1; transform: none; filter: none; }
+    }
+    .builder-stage > * > * {
+      animation: builder-pop 480ms cubic-bezier(.16,1,.3,1) both;
+    }
+    .builder-stage > * > *:nth-child(1) { animation-delay: 40ms; }
+    .builder-stage > * > *:nth-child(2) { animation-delay: 110ms; }
+    .builder-stage > * > *:nth-child(3) { animation-delay: 180ms; }
+    .builder-stage > * > *:nth-child(4) { animation-delay: 250ms; }
+    .builder-stage > * > *:nth-child(5) { animation-delay: 320ms; }
+    .builder-stage > * > *:nth-child(6) { animation-delay: 390ms; }
+    .builder-stage > * > *:nth-child(n+7) { animation-delay: 460ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .builder-stage > * > * { animation: none !important; }
+    }
+    `
+    : `body { min-height: 100vh; } #root { min-height: 100vh; }`;
+
+  const mountOpen = staged ? `<div class="builder-stage">` : "";
+  const mountClose = staged ? `</div>` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -34,8 +76,7 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: P
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { min-height: 100vh; }
-    #root { min-height: 100vh; }
+    ${stageCss}
     #error-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: #ff6b6b; padding: 2rem; font-family: monospace; font-size: 14px; white-space: pre-wrap; overflow: auto; z-index: 9999; }
     .__builder-hover { outline: 2px dashed #00e5ff !important; outline-offset: 2px; cursor: crosshair !important; }
     .__builder-selected { outline: 2px solid #00e5ff !important; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(0,229,255,0.2) !important; }
@@ -67,7 +108,7 @@ export function buildPreviewHtml(code: string, darkMode: boolean = true, opts: P
   <\/script>
 </head>
 <body class="${bg}">
-  <div id="root"></div>
+  ${mountOpen}<div id="root"></div>${mountClose}
   <div id="error-overlay"></div>
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext } = React;

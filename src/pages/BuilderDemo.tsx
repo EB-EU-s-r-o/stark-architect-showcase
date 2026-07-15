@@ -25,6 +25,7 @@ import BuilderVersions from "@/components/builder/BuilderVersions";
 import BuilderDiffView from "@/components/builder/BuilderDiffView";
 import BuilderOverlay, { type Pin } from "@/components/builder/BuilderOverlay";
 import BuilderPublishSheet from "@/components/builder/BuilderPublishSheet";
+import BuilderStage from "@/components/builder/BuilderStage";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -448,9 +449,9 @@ export default function BuilderDemo() {
   const hasMistralKey = MODELS.some((m) => m.provider === "mistral");
 
   const deviceFrame = {
-    mobile: "w-[390px] h-[680px] rounded-[2.2rem] border-[10px] border-slate-800 shadow-[0_0_40px_rgba(0,229,255,0.15)]",
-    tablet: "w-[820px] h-[560px] rounded-[1.5rem] border-[8px] border-slate-800 shadow-[0_0_40px_rgba(0,229,255,0.12)]",
-    desktop: "w-full h-full rounded-xl border border-primary/20 shadow-[0_0_50px_rgba(0,229,255,0.08)]",
+    mobile: "w-[390px] h-[680px] max-h-[72vh]",
+    tablet: "w-[820px] h-[560px] max-h-[72vh]",
+    desktop: "w-full max-w-[960px] h-[640px] max-h-[72vh]",
   }[device];
 
   return (
@@ -664,25 +665,16 @@ export default function BuilderDemo() {
             </div>
 
             <TabsContent value="preview" className="flex-1 min-h-0 m-0 relative">
-              <div className="w-full h-full p-6 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_rgba(0,229,255,0.06),_transparent_60%)] overflow-auto"
-                style={{
-                  backgroundImage: `linear-gradient(rgba(0,229,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.04) 1px,transparent 1px)`,
-                  backgroundSize: "24px 24px",
-                }}>
-                <div
-                  className={cn("overflow-hidden bg-slate-950 relative transition-transform", deviceFrame)}
-                  style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
-                >
-                  <iframe
-                    key={previewKey}
-                    srcDoc={previewHtml}
-                    className="w-full h-full border-0"
-                    sandbox="allow-scripts"
-                    title="Live Preview"
-                    onLoad={() => setPreviewError(null)}
-                  />
-                </div>
-              </div>
+              <BuilderStage
+                html={previewHtml}
+                previewKey={previewKey}
+                isStreaming={isStreaming}
+                zoom={zoom}
+                deviceFrame={deviceFrame}
+                route={activeRoute}
+                onIframeLoad={() => setPreviewError(null)}
+              />
+
 
               {/* Zoom controls */}
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-40">

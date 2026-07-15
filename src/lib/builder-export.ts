@@ -3,7 +3,7 @@ import { buildPreviewHtml } from "./builder-preview";
 
 export async function exportBundle(code: string, name = "builder-app") {
   const zip = new JSZip();
-  zip.file("index.html", buildPreviewHtml(code, true));
+  zip.file("index.html", buildPreviewHtml(code, true, { staged: false }));
   zip.file("App.jsx", code);
   zip.file(
     "README.md",
