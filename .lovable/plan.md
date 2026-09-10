@@ -1,59 +1,61 @@
+# Redesign `/builder` podľa Chatbot UI
+
 ## Cieľ
+Prestavím celú sekciu `/builder` do prehľadného pracovného prostredia inšpirovaného `mckaywrigley/chatbot-ui`, ale zachovám čierno-čiernu, cyan a terminálovú identitu portfólia. Nepreberiem Next.js ani jeho databázovú vrstvu; prenesiem iba overené rozloženie, navigáciu a interakčné vzory vhodné pre existujúcu React/Vite aplikáciu.
 
-Náhľad v `/builder` momentálne roztiahne vygenerovaný komponent na celú výšku panelu (`min-h-screen` v sandboxe + iframe cez celý pravý stĺpec). Chceš ho zamknúť do menších "card" kontajnerov, ktoré sa objavujú postupne (staggered reveal) a majú jemné UI/UX mikroanimácie, aby preview pôsobilo živo a prezentačne — nie ako plná stránka.
+## Nové rozloženie
 
-## Čo zmením
-
-### 1. Preview "stage" namiesto full-bleed iframe
-V `BuilderDemo.tsx` (pravý panel) obalím iframe do centrovanej **device-frame karty**:
-- max šírka ~960px, max výška ~72vh, `rounded-2xl`, jemný border + `shadow-glow` (cyan token)
-- okolo grid pattern pozadie (už máme `.grid-pattern-subtle` v `index.css`) → preview vyzerá "položené" na plátne, nie roztiahnuté
-- traffic-light bodky + route label hore na karte (mac-style chrome)
-- zoom controls a floating toolbar zostanú, len sa prepočítajú voči karte
-
-### 2. Sandbox: preč s `min-h-screen`
-V `src/lib/builder-preview.ts`:
-- odstrániť `min-height: 100vh` z `body` a `#root`
-- pridať wrapper `.builder-stage` s `padding`, `max-width`, `margin: 0 auto`, aby generovaný App žil v kompaktnom rámci a neťahal sa donekonečna
-- pridať globálne CSS: `.builder-stage > * { animation: builder-pop 420ms cubic-bezier(.16,1,.3,1) both; }` s `nth-child` stagger delayom (60ms krokom) → sekcie generovaného UI sa objavia postupne
-- jemný `backdrop` gradient + `scanline` overlay (voliteľne, veľmi decentné, opacity ~0.04)
-
-### 3. Streaming reveal počas generovania
-Aktuálne sa iframe refreshne až po dokončení streamu. Pridám:
-- počas `isLoading` prekryjem preview kartu **skeleton mriežkou** (3–4 shimmer bloky rôznej výšky, `animate-pulse` + `bg-gradient-to-r`)
-- keď dorazí prvý kompletný JSX blok, karta sa "flipne" cez `motion.div` (opacity + scale 0.98→1, 300ms)
-- pri každom novom builde: iframe fade-out (150ms) → nový obsah fade-in + subtle scale-in (framer-motion, `AnimatePresence`, key = hash kódu)
-
-### 4. Mikroanimácie chrome-u
-- route bar chip: hover glow (`transition-shadow`)
-- floating toolbar tlačidlá: `whileTap={{ scale: 0.92 }}`, aktívny stav má cyan glow ring
-- zoom controls: numerická hodnota animovane (`AnimatePresence` na percentách)
-- keď sa objaví toast / warning (napr. Mistral+image fallback), pridám `slide-in-right` (už máme v tailwind config)
-
-### 5. Nový komponent `BuilderStage.tsx`
-Aby `BuilderDemo.tsx` nenarástol, vytiahnem preview-kartu + skeleton + zoom + toolbar mount do jedného komponentu:
+```text
+┌──────┬──────────────────┬────────────────────────────────────────────┐
+│ Rail │ Projekty/chaty   │ AI Builder workspace                       │
+│      │ + nový chat      │ hlavička + chat/preview/code workspace     │
+│      │ hľadanie         │                                            │
+│      │ história         │ composer pevne pri spodnom okraji          │
+└──────┴──────────────────┴────────────────────────────────────────────┘
 ```
-src/components/builder/BuilderStage.tsx
-```
-Props: `html`, `isLoading`, `zoom`, `route`, `tool`, `onToolChange`, overlay props.
 
-## Technické poznámky
+- **Ikonový rail:** Chat, Preview, Code, Diff, Console, Versions a Settings; aktívna položka bude jasne zvýraznená.
+- **Bočný panel:** nový chat, filtrovanie konverzácií, posledné generácie, typ výstupu a zbalenie panelu.
+- **Pracovná plocha:** kompaktná hlavička s názvom, modelom, stavom generovania a publikovaním; chat a výstup budú resizable panely.
+- **Mobil:** jedno plátno naraz s jednoduchým prepínačom Chat/Preview/Code; panely sa nebudú prekrývať.
 
-- `builder-preview.ts` `buildPreviewHtml` dostane nový param `staged?: boolean` (default true). Keď `false`, správa sa ako dnes (pre export cez `builder-export.ts` — publikovaná appka NECHCE stage rámik).
-- `exportBundle` musí volať `buildPreviewHtml(code, dark, { staged: false })` aby export bol full-page.
-- Stagger CSS pridám do inline `<style>` v sandboxe (nie do `index.css`) — inak by ovplyvnil hlavnú aplikáciu.
-- Animácie robím cez Tailwind keyframes + framer-motion (obe už v projekte).
-- Žiadne zmeny business logiky: chat stream, cache, versions, BYOK, routing zostávajú.
+## Chat postavený na AI Elements
+- Nainštalujem oficiálne zdrojové komponenty `conversation`, `message`, `prompt-input` a `shimmer` z AI Elements.
+- Konverzácia dostane stabilné automatické rolovanie a návrat na koniec.
+- Správy používateľa ostanú kontrastné; odpovede AI budú bez farebnej bubliny, podobne ako Chatbot UI.
+- Streaming bude zobrazovať decentné „Thinking…“ a priebežnú odpoveď bez skákania rozloženia.
+- Composer bude obsahovať obrázkovú prílohu, model, Send/Stop a zachová Enter/Shift+Enter správanie.
+- Zachovám údaje pri odpovedi: model, tokeny, čas, cena, cache a fallback.
+- `tool` komponent nepridám, pretože aktuálna AI funkcia neposiela tool calls.
 
-## Súbory
+## Zachované a presunuté funkcie
+- Live React/Tailwind preview, staged generovanie a animácie.
+- Mistral/Gemini, BYOK, automatický fallback a vision cez Gemini.
+- Multi-route projekty, pridanie stránky a prepínanie trás.
+- Desktop/tablet/mobile náhľad, refresh, zoom a otvorenie v novej karte.
+- Preview, Code, Diff, Console a Versions bez straty ich dát alebo správania.
+- Element select, inline text edit, anotácie a komentáre pre AI.
+- JSX kontrola, runtime chyby, Retry a Fix with AI.
+- Cache, náklady, história, ZIP export a publish dialóg.
+- Klávesové skratky a uložené session nastavenia.
 
-- upraviť `src/lib/builder-preview.ts` — staged wrapper, stagger CSS, no `min-h-screen`
-- upraviť `src/pages/BuilderDemo.tsx` — použiť `BuilderStage`, pridať `AnimatePresence` na iframe key
-- upraviť `src/lib/builder-export.ts` — volať `buildPreviewHtml` so `staged: false`
-- vytvoriť `src/components/builder/BuilderStage.tsx` — device-frame karta + skeleton + motion wrapper
+## UX úpravy
+- Nahradím systémové `prompt()` a `confirm()` vlastnými dialógmi pre novú route a režim exportu.
+- Presuniem model a hlavné nastavenia do kompaktnej hlavičky/composeru podľa Chatbot UI.
+- Pridám akcie Copy a Retry k AI správam bez rušivých permanentných tlačidiel.
+- Zjednotím výšky ovládacích prvkov, stavy aktívnych panelov, tooltipy a focus stavy.
+- Zjemním cyan glow; hierarchiu budú tvoriť hlavne čierne povrchy, deliace čiary a typografia.
+- Zachovám JetBrains Mono a existujúce farebné tokeny namiesto kopírovania cudzej vizuálnej témy.
 
-## Nemením
+## Technické riešenie
+- Rozdelím monolitickú stránku na menšie časti: workspace shell, rail/sidebar, chat surface, header a export/route dialógy.
+- Existujúcu streaming a builder logiku ponechám bez zmeny kontraktov, vrátane sentinel správy `streaming`, iframe `postMessage`, cache kľúčov a virtual routes.
+- Chatbot UI použijem ako MIT dizajnovú referenciu; nebudem prenášať jeho Next.js routing, server actions, databázu, i18n ani veľký globálny context.
+- AI Elements prispôsobím existujúcim shadcn komponentom a semantickým tokenom projektu.
 
-- streaming pipeline v `supabase/functions/builder-chat`
-- versions, cache, router, publish sheet
-- vizuálnu identitu appky (JetBrains Mono, cyan glow, black-on-black)
+## Overenie
+- Produkčný build a lint.
+- Desktop kontrola pri 1280 px: skladanie panelov, resize, streaming, náhľad a všetky nástroje.
+- Mobilná kontrola pri 390–420 px: Chat/Preview/Code, composer, príloha a žiadne prekrývanie.
+- Funkčný test: prompt → streaming → kód → preview; potom route, diff, console, version restore, retry, export a publish.
+- Vizuálne porovnanie screenshotov pred/po so zachovaním čitateľnosti a čierno-cyan identity.
