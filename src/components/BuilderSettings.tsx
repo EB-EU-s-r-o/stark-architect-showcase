@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, X, Trash2, History, ChevronDown, KeyRound, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { getModel } from "@/lib/builder-models";
 import { cn } from "@/lib/utils";
 
 interface BuilderSettingsProps {
+  openRequest?: number;
   preset: string;
   onPresetChange: (preset: string) => void;
   customSystemPrompt: string;
@@ -26,6 +27,7 @@ interface BuilderSettingsProps {
 }
 
 export default function BuilderSettings({
+  openRequest = 0,
   preset,
   onPresetChange,
   customSystemPrompt,
@@ -43,6 +45,10 @@ export default function BuilderSettings({
   const [, force] = useState(0);
   const history = getHistory();
   const session = getSession();
+
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
 
   return (
     <>
