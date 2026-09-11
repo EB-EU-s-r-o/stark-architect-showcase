@@ -56,7 +56,7 @@ export default function BuilderWorkspaceNav({
   const filtered = versions.filter((version) => version.prompt.toLowerCase().includes(search.toLowerCase())).slice(0, 12);
 
   return (
-    <aside className="hidden h-full shrink-0 border-r border-border bg-card/40 md:flex">
+    <aside className="relative hidden h-full shrink-0 border-r border-border bg-card/40 md:flex">
       <nav className="flex w-14 flex-col items-center border-r border-border py-2" aria-label="Builder views">
         <div className="mb-3 flex size-9 items-center justify-center rounded-md border border-primary/30 bg-primary/10 font-mono text-[11px] font-bold text-primary">&gt;_</div>
         <div className="flex flex-1 flex-col gap-1">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, X, Trash2, History, ChevronDown, KeyRound, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,10 +46,9 @@ export default function BuilderSettings({
   const history = getHistory();
   const session = getSession();
 
-  useState(() => openRequest);
-  if (openRequest > 0 && !open) {
-    queueMicrotask(() => setOpen(true));
-  }
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
 
   return (
     <>

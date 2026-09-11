@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, Sparkles, Copy, Check, Loader2, Square, Wand2, AlertTriangle,
-  ChevronLeft, ChevronRight, ImagePlus, X, History, Code2, Eye, Terminal, GitCompare, ZoomIn, ZoomOut,
+  Braces, Check, Copy, Loader2, PanelLeft, Wand2, AlertTriangle,
+  History, Code2, Eye, Terminal, GitCompare, ZoomIn, ZoomOut, Zap,
 } from "lucide-react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,6 @@ import { getVersions, pushVersion, type Version } from "@/lib/builder-versions";
 import { exportBundle } from "@/lib/builder-export";
 import { detectRouteFromPrompt, loadRoutes, saveRoutes, type RouteMap } from "@/lib/builder-router";
 import BuilderSettings from "@/components/BuilderSettings";
-import BuilderModelPicker from "@/components/BuilderModelPicker";
 import BuilderConsole, { type ConsoleEntry } from "@/components/BuilderConsole";
 import BuilderCodeView from "@/components/BuilderCodeView";
 import BuilderRouteBar from "@/components/builder/BuilderRouteBar";
@@ -26,17 +25,12 @@ import BuilderDiffView from "@/components/builder/BuilderDiffView";
 import BuilderOverlay, { type Pin } from "@/components/builder/BuilderOverlay";
 import BuilderPublishSheet from "@/components/builder/BuilderPublishSheet";
 import BuilderStage from "@/components/builder/BuilderStage";
+import BuilderChatPanel, { type BuilderMessage } from "@/components/builder/BuilderChatPanel";
+import BuilderWorkspaceNav, { type WorkspaceView } from "@/components/builder/BuilderWorkspaceNav";
+import { BuilderExportDialog, BuilderRouteDialog } from "@/components/builder/BuilderActionDialogs";
 import { useToast } from "@/hooks/use-toast";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  usage?: Usage;
-  fromCache?: boolean;
-  fallbackFrom?: string;
-  imageDataUrl?: string;
-}
+type Message = BuilderMessage;
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/builder-chat`;
 const BYOK_KEY = "builder-byok-mistral";
@@ -120,10 +114,14 @@ export default function BuilderDemo() {
   });
   const [zoom, setZoom] = useState(100);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [routeDialogOpen, setRouteDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [navExpanded, setNavExpanded] = useState(true);
+  const [historySearch, setHistorySearch] = useState("");
+  const [settingsRequest, setSettingsRequest] = useState(0);
   const [mobileView, setMobileView] = useState<"chat" | "preview">("preview");
   useEffect(() => { try { sessionStorage.setItem("builder-pins", JSON.stringify(pins)); } catch {} }, [pins]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const consoleIdRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,7 +131,6 @@ export default function BuilderDemo() {
   const isMistral = currentModel?.provider === "mistral";
 
   useEffect(() => { sessionStorage.setItem(BYOK_KEY, byokKey); }, [byokKey]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   // iframe messages
   useEffect(() => {
