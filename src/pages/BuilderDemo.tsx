@@ -402,8 +402,9 @@ export default function BuilderDemo() {
     setTool("none"); setSelectedEl(null);
   };
 
-  const handleAddRoute = () => {
-    const name = prompt("Route path (napr. /about)")?.trim();
+  const handleAddRoute = () => setRouteDialogOpen(true);
+  const handleCreateRoute = (name: string) => {
+    setRouteDialogOpen(false);
     if (!name || !name.startsWith("/")) return;
     if (routes[name]) { setActiveRoute(name); return; }
     setRoutes((r) => ({ ...r, [name]: DEFAULT_CODE }));
@@ -422,16 +423,25 @@ export default function BuilderDemo() {
   };
 
   const handleCopy = () => { navigator.clipboard.writeText(currentCode); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const handleExport = () => {
-    const staged = window.confirm(
-      "Export staged preview?\n\nOK = zabaliť s animovaným staged wrapperom (progressive reveal, kompaktný container).\nCancel = klasický full-page export."
-    );
-    exportBundle(
-      currentCode,
-      `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`,
-      { staged }
-    );
+  const handleExport = () => setExportDialogOpen(true);
+  const runExport = (staged: boolean) => {
+    setExportDialogOpen(false);
+    exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`, { staged });
     toast({ title: staged ? "Export: staged" : "Export: full-page" });
+  };
+  const handleNewChat = () => {
+    abortRef.current?.abort();
+    setMessages((m) => m.slice(0, 1));
+    setInput(""); setAttachedImage(null); setSelectedEl(null);
+  };
+  const handleRetryMessage = (id: string) => {
+    const idx = messages.findIndex((m) => m.id === id);
+    const prevUser = [...messages.slice(0, idx)].reverse().find((m) => m.role === "user");
+    if (prevUser) setInput(prevUser.content);
+  };
+  const handleViewChange = (v: WorkspaceView) => {
+    if (v === "chat") { setNavExpanded(true); setMobileView("chat"); return; }
+    setBottomTab(v); setMobileView("preview");
   };
   const handlePublish = () => setPublishOpen(true);
 
@@ -467,36 +477,114 @@ export default function BuilderDemo() {
     desktop: "w-full max-w-[960px] h-[640px] max-h-[72vh]",
   }[device];
 
-  return (
-    <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
-      {/* Header */}
-      <header className="relative z-20 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 h-12 gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 border border-primary/30">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-mono font-semibold text-primary">&gt;_ BUILDER</span>
-            </div>
-            <span className="hidden sm:inline text-[11px] text-muted-foreground font-mono">
-              {currentPreset?.icon} {currentPreset?.label}
-            </span>
-            {isStreaming && (
-              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-                <Loader2 className="w-3 h-3 animate-spin text-primary" />{tokenCount} tok
-              </span>
-            )}
-            {latencyMs !== null && !isStreaming && (
-              <span className="hidden md:inline text-[11px] text-muted-foreground font-mono">{(latencyMs / 1000).toFixed(2)}s</span>
+  const tabBtn = "h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono";
+  const errorCount = consoleEntries.filter((c) => c.level === "error").length;
+
+  const chat = (
+    <BuilderChatPanel
+      messages={messages} input={input} onInputChange={setInput} isStreaming={isStreaming}
+      attachedImage={attachedImage} onAttachClick={() => fileInputRef.current?.click()}
+      onRemoveAttachment={() => setAttachedImage(null)} onSubmit={handleSend} onStop={handleStop}
+      model={model} onModelChange={setModel} preset={preset} onPresetChange={setPreset}
+      currentPreset={currentPreset} selectedEl={selectedEl} onAskSelection={handleAskAboutSelection}
+      onClearSelection={() => setSelectedEl(null)} onRetryMessage={handleRetryMessage}
+    />
+  );
+
+  const canvas = (
+    <main className="flex h-full min-w-0 flex-col bg-background">
+      <BuilderRouteBar
+        routes={routeList} route={activeRoute} onRouteChange={setActiveRoute} onAddRoute={handleAddRoute}
+        device={device} onDeviceChange={setDevice} onRefresh={() => setPreviewKey((k) => k + 1)}
+        onOpenNew={handleOpenNew} onExport={handleExport} onPublish={handlePublish}
+      />
+      {(previewError || errorCount > 0) && (
+        <div className="flex items-center justify-between gap-2 border-b border-destructive/30 bg-destructive/10 px-3 py-1.5 animate-fade-in">
+          <div className="flex items-center gap-1.5 truncate text-xs text-destructive">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />{previewError || "Runtime error in console"}
+          </div>
+          <Button size="sm" variant="destructive" onClick={handleFixWithAi} disabled={isStreaming} className="h-6 shrink-0 gap-1">
+            <Wand2 className="h-3 w-3" /> Fix with AI
+          </Button>
+        </div>
+      )}
+      <Tabs value={bottomTab} onValueChange={setBottomTab} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-border/50 bg-background/50 px-3">
+          <TabsList className="h-9 gap-0.5 overflow-x-auto bg-transparent">
+            <TabsTrigger value="preview" className={tabBtn}><Eye className="h-3 w-3" /> PREVIEW</TabsTrigger>
+            <TabsTrigger value="code" className={tabBtn}><Code2 className="h-3 w-3" /> CODE</TabsTrigger>
+            <TabsTrigger value="diff" className={tabBtn}><GitCompare className="h-3 w-3" /> DIFF</TabsTrigger>
+            <TabsTrigger value="console" className={tabBtn}>
+              <Terminal className="h-3 w-3" /> CONSOLE
+              {errorCount > 0 && <span className="ml-1 rounded bg-destructive/20 px-1 text-destructive">{errorCount}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="versions" className={tabBtn}><History className="h-3 w-3" /> VERSIONS</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            {isStreaming && <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin text-primary" />{tokenCount} tok</span>}
+            {latencyMs !== null && !isStreaming && <span className="hidden lg:inline"><Zap className="mr-0.5 inline h-3 w-3 text-primary" />{(latencyMs / 1000).toFixed(2)}s</span>}
+            {bottomTab === "code" && (
+              <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 text-xs">
+                {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}{copied ? "Copied" : "Copy"}
+              </Button>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            {/* Mobile chat/preview switcher */}
-            <div className="md:hidden flex items-center rounded-md bg-muted/40 p-0.5 mr-1">
-              <button onClick={() => setMobileView("chat")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>CHAT</button>
-              <button onClick={() => setMobileView("preview")} className={cn("text-[10px] px-2 py-1 rounded font-mono", mobileView === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>PREVIEW</button>
+        </div>
+        <TabsContent value="preview" className="relative m-0 min-h-0 flex-1">
+          <BuilderStage html={previewHtml} previewKey={previewKey} isStreaming={isStreaming} zoom={zoom}
+            deviceFrame={deviceFrame} route={activeRoute} onIframeLoad={() => setPreviewError(null)}
+            error={previewError} onRetry={handleRetryPreview} onFixWithAi={handleFixWithAi} />
+          <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-lg border border-border/50 bg-background/80 p-1 backdrop-blur">
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.max(25, z - 25))} title="Zoom out"><ZoomOut className="h-3 w-3" /></Button>
+            <button className="w-9 text-center font-mono text-[10px]" onClick={() => setZoom(100)} title="Reset zoom">{zoom}%</button>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.min(200, z + 25))} title="Zoom in"><ZoomIn className="h-3 w-3" /></Button>
+          </div>
+          <BuilderFloatingToolbar tool={tool} onChange={(t) => { setTool(t); if (t !== "select") setSelectedEl(null); }} />
+          <BuilderOverlay mode={tool === "annotate" ? "annotate" : tool === "comment" ? "comment" : "none"}
+            pins={pins} onPinsChange={setPins} onSendComments={handleSendComments} />
+          {tool === "text" && (
+            <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2 rounded-full border border-primary/40 bg-primary/20 px-3 py-1 font-mono text-[10px] text-primary">
+              DOUBLE-CLICK any text to edit inline
             </div>
-            <BuilderModelPicker model={model} onChange={setModel} hasMistralKey={hasMistralKey} byokActive={!!byokKey} />
+          )}
+        </TabsContent>
+        <TabsContent value="code" className="m-0 min-h-0 flex-1 overflow-auto bg-card"><BuilderCodeView code={currentCode} /></TabsContent>
+        <TabsContent value="diff" className="m-0 min-h-0 flex-1"><BuilderDiffView previous={previousCode} current={currentCode} /></TabsContent>
+        <TabsContent value="console" className="m-0 min-h-0 flex-1 overflow-hidden"><BuilderConsole entries={consoleEntries} onClear={() => setConsoleEntries([])} /></TabsContent>
+        <TabsContent value="versions" className="m-0 min-h-0 flex-1 overflow-hidden"><BuilderVersions versions={versions} onRestore={handleRestoreVersion} /></TabsContent>
+      </Tabs>
+    </main>
+  );
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
+      <input type="file" accept="image/*" ref={fileInputRef} className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) handleAttachImage(e.target.files[0]); e.target.value = ""; }} />
+      <BuilderWorkspaceNav
+        activeView={bottomTab as WorkspaceView} onViewChange={handleViewChange}
+        expanded={navExpanded} onExpandedChange={setNavExpanded}
+        versions={versions} search={historySearch} onSearchChange={setHistorySearch}
+        onNewChat={handleNewChat} onOpenSettings={() => setSettingsRequest((n) => n + 1)}
+        onRestoreVersion={handleRestoreVersion}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-11 items-center justify-between gap-2 border-b border-border/50 bg-background/80 px-3 backdrop-blur-xl">
+          <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1">
+            <Braces className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono text-xs font-semibold text-primary">&gt;_ BUILDER</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="mr-1 flex items-center rounded-md bg-muted/40 p-0.5 md:hidden">
+              {(["chat", "preview"] as const).map((v) => (
+                <button key={v} onClick={() => setMobileView(v)}
+                  className={cn("rounded px-2 py-1 font-mono text-[10px] uppercase", mobileView === v ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{v}</button>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" className="hidden h-8 w-8 p-0 md:inline-flex" onClick={() => setSidebarCollapsed((v) => !v)} title="Toggle chat (⌘/)">
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <BuilderSettings
+              openRequest={settingsRequest}
               preset={preset} onPresetChange={setPreset}
               customSystemPrompt={customSystemPrompt} onCustomSystemPromptChange={setCustomSystemPrompt}
               darkPreview={darkPreview} onDarkPreviewChange={setDarkPreview}
@@ -506,238 +594,24 @@ export default function BuilderDemo() {
             />
           </div>
         </div>
-      </header>
-
-      <div className="flex flex-1 min-h-0 relative">
-        {/* CHAT PANEL */}
-        <motion.aside
-          animate={{ width: sidebarCollapsed ? 0 : 400 }}
-          className={cn(
-            "border-r border-border/50 bg-background/40 backdrop-blur-sm flex flex-col overflow-hidden shrink-0",
-            "md:flex",
-            mobileView === "chat" ? "flex absolute inset-0 z-30 md:relative md:z-auto md:!w-[400px]" : "hidden md:flex"
-          )}
-        >
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.length <= 1 && currentPreset && (
-              <div className="mb-4">
-                <p className="text-[10px] font-mono text-muted-foreground mb-2">// TRY THESE</p>
-                <div className="space-y-1">
-                  {currentPreset.examplePrompts.map((p, i) => (
-                    <button key={i} onClick={() => setInput(p)}
-                      className="w-full text-left text-xs p-2 rounded-md bg-muted/30 hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/30 transition-all text-muted-foreground font-mono">
-                      &gt; {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <AnimatePresence mode="popLayout">
-              {messages.map((m) => (
-                <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-                  <div className={cn(
-                    "max-w-[92%] rounded-xl px-3 py-2 text-sm space-y-1",
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/40 border border-border/40"
-                  )}>
-                    {m.imageDataUrl && <img src={m.imageDataUrl} alt="attached" className="rounded-md max-h-40 mb-1" />}
-                    <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                    {m.usage && (
-                      <div className="text-[10px] opacity-70 flex flex-wrap gap-x-2 pt-1 border-t border-current/10 font-mono">
-                        <span>⚡{(m.usage.latencyMs / 1000).toFixed(2)}s</span>
-                        <span>{m.usage.promptTokens + m.usage.completionTokens}tok</span>
-                        <span>{formatCost(calcCostUsd(m.usage))}</span>
-                        <span>·{getModel(m.usage.model)?.label}</span>
-                        {m.fromCache && <span>·♻️</span>}
-                        {m.fallbackFrom && <span>·↩{getModel(m.fallbackFrom)?.label}</span>}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Selection banner */}
-          {selectedEl && (
-            <div className="mx-3 mb-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-[11px] font-mono flex items-center justify-between gap-2">
-              <span className="truncate text-primary">&lt;{selectedEl.tag}&gt; {selectedEl.text.slice(0, 40)}</span>
-              <div className="flex gap-1">
-                <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={handleAskAboutSelection}>Ask AI</Button>
-                <button onClick={() => setSelectedEl(null)} className="p-1 hover:bg-muted rounded"><X className="w-3 h-3" /></button>
-              </div>
-            </div>
-          )}
-
-          {/* Composer */}
-          <div className="border-t border-border/50 p-3 bg-background/60">
-            {attachedImage && (
-              <div className="mb-2 relative inline-block">
-                <img src={attachedImage} alt="preview" className="rounded-md max-h-24 border border-border/50" />
-                <button onClick={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            <div className="rounded-xl bg-muted/30 border border-border/50 focus-within:border-primary/50 transition-all">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSend(); }
-                  else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-                }}
-                placeholder="Popíš čo postaviť alebo zmeniť... (Enter=send, Shift+Enter=newline)"
-                rows={2}
-                className="w-full bg-transparent text-sm outline-none placeholder-muted-foreground px-3 py-2 resize-none font-mono"
-                disabled={isStreaming}
-              />
-              <div className="flex items-center justify-between px-2 pb-2 gap-2">
-                <div className="flex items-center gap-1">
-                  <input type="file" accept="image/*" ref={fileInputRef} className="hidden"
-                    onChange={(e) => e.target.files?.[0] && handleAttachImage(e.target.files[0])} />
-                  <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 w-7 p-0" title="Attach image (vision)">
-                    <ImagePlus className="w-4 h-4" />
-                  </Button>
-                  <span className="text-[10px] text-muted-foreground font-mono">{currentModel?.label}</span>
-                </div>
-                {isStreaming ? (
-                  <Button size="sm" variant="destructive" onClick={handleStop} className="h-7 gap-1">
-                    <Square className="w-3 h-3" /> Stop
-                  </Button>
-                ) : (
-                  <Button size="sm" onClick={handleSend} disabled={!input.trim() && !attachedImage} className="h-7 gap-1">
-                    <Send className="w-3 h-3" /> Send
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.aside>
-
-        {/* collapse handle */}
-        <button
-          onClick={() => setSidebarCollapsed((v) => !v)}
-          className="absolute top-1/2 -translate-y-1/2 z-30 p-1 rounded-r-md bg-muted/50 border border-l-0 border-border/50 hover:bg-primary/20"
-          style={{ left: sidebarCollapsed ? 0 : 400 }}
-        >
-          {sidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-        </button>
-
-        {/* MAIN CANVAS */}
-        <main className={cn("flex-1 flex flex-col min-w-0 bg-background", mobileView === "chat" ? "hidden md:flex" : "flex")}>
-          <BuilderRouteBar
-            routes={routeList} route={activeRoute} onRouteChange={setActiveRoute}
-            onAddRoute={handleAddRoute}
-            device={device} onDeviceChange={setDevice}
-            onRefresh={() => setPreviewKey((k) => k + 1)}
-            onOpenNew={handleOpenNew} onExport={handleExport} onPublish={handlePublish}
-          />
-
-          {(previewError || consoleEntries.some((c) => c.level === "error")) && (
-            <div className="px-3 py-1.5 bg-destructive/10 border-b border-destructive/30 flex items-center justify-between gap-2">
-              <div className="text-xs text-destructive truncate flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                {previewError || "Runtime error in console"}
-              </div>
-              <Button size="sm" variant="destructive" onClick={handleFixWithAi} disabled={isStreaming} className="h-6 shrink-0 gap-1">
-                <Wand2 className="w-3 h-3" /> Fix with AI
-              </Button>
-            </div>
-          )}
-
-          <Tabs value={bottomTab} onValueChange={setBottomTab} className="flex-1 flex flex-col min-h-0">
-            <div className="border-b border-border/50 px-3 flex items-center justify-between bg-background/50">
-              <TabsList className="h-9 bg-transparent gap-0.5">
-                <TabsTrigger value="preview" className="h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono">
-                  <Eye className="w-3 h-3" /> PREVIEW
-                </TabsTrigger>
-                <TabsTrigger value="code" className="h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono">
-                  <Code2 className="w-3 h-3" /> CODE
-                </TabsTrigger>
-                <TabsTrigger value="diff" className="h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono">
-                  <GitCompare className="w-3 h-3" /> DIFF
-                </TabsTrigger>
-                <TabsTrigger value="console" className="h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono">
-                  <Terminal className="w-3 h-3" /> CONSOLE ({consoleEntries.length})
-                </TabsTrigger>
-                <TabsTrigger value="versions" className="h-7 gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-xs font-mono">
-                  <History className="w-3 h-3" /> VERSIONS ({versions.length})
-                </TabsTrigger>
-              </TabsList>
-              {bottomTab === "code" && (
-                <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 text-xs">
-                  {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                  {copied ? "Copied" : "Copy"}
-                </Button>
+        <div className="min-h-0 flex-1">
+          <div className="h-full md:hidden">{mobileView === "chat" ? chat : canvas}</div>
+          <div className="hidden h-full md:block">
+            <PanelGroup direction="horizontal" autoSaveId="builder-layout">
+              {!sidebarCollapsed && (
+                <>
+                  <Panel id="chat" order={1} defaultSize={32} minSize={22} maxSize={50}>{chat}</Panel>
+                  <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary data-[resize-handle-state=drag]:bg-primary" />
+                </>
               )}
-            </div>
-
-            <TabsContent value="preview" className="flex-1 min-h-0 m-0 relative">
-              <BuilderStage
-                html={previewHtml}
-                previewKey={previewKey}
-                isStreaming={isStreaming}
-                zoom={zoom}
-                deviceFrame={deviceFrame}
-                route={activeRoute}
-                onIframeLoad={() => setPreviewError(null)}
-                error={previewError}
-                onRetry={handleRetryPreview}
-                onFixWithAi={handleFixWithAi}
-              />
-
-
-              {/* Zoom controls */}
-              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/50 z-40">
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.max(25, z - 25))} title="Zoom out">
-                  <ZoomOut className="w-3 h-3" />
-                </Button>
-                <span className="text-[10px] font-mono w-8 text-center">{zoom}%</span>
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setZoom((z) => Math.min(200, z + 25))} title="Zoom in">
-                  <ZoomIn className="w-3 h-3" />
-                </Button>
-              </div>
-
-              <BuilderFloatingToolbar tool={tool} onChange={(t) => { setTool(t); if (t !== "select") setSelectedEl(null); }} />
-              <BuilderOverlay
-                mode={tool === "annotate" ? "annotate" : tool === "comment" ? "comment" : "none"}
-                pins={pins}
-                onPinsChange={setPins}
-                onSendComments={handleSendComments}
-              />
-              {tool === "text" && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-[10px] font-mono text-primary z-10 pointer-events-none">
-                  DOUBLE-CLICK any text to edit inline
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="code" className="flex-1 min-h-0 m-0 overflow-auto bg-[#282c34]">
-              <BuilderCodeView code={currentCode} />
-            </TabsContent>
-
-            <TabsContent value="diff" className="flex-1 min-h-0 m-0">
-              <BuilderDiffView previous={previousCode} current={currentCode} />
-            </TabsContent>
-
-            <TabsContent value="console" className="flex-1 min-h-0 m-0 overflow-hidden">
-              <BuilderConsole entries={consoleEntries} onClear={() => setConsoleEntries([])} />
-            </TabsContent>
-
-            <TabsContent value="versions" className="flex-1 min-h-0 m-0 overflow-hidden">
-              <BuilderVersions versions={versions} onRestore={handleRestoreVersion} />
-            </TabsContent>
-          </Tabs>
-        </main>
+              <Panel id="canvas" order={2} minSize={40}>{canvas}</Panel>
+            </PanelGroup>
+          </div>
+        </div>
       </div>
-
+      <BuilderRouteDialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen} onCreate={handleCreateRoute} />
+      <BuilderExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} onExport={runExport} />
       <BuilderPublishSheet open={publishOpen} onOpenChange={setPublishOpen} onExport={handleExport} />
     </div>
   );
 }
-
