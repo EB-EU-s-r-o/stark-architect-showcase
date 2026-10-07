@@ -493,6 +493,7 @@ export default function BuilderDemo() {
       model={model} onModelChange={setModel} preset={preset} onPresetChange={setPreset}
       currentPreset={currentPreset} selectedEl={selectedEl} onAskSelection={handleAskAboutSelection}
       onClearSelection={() => setSelectedEl(null)} onRetryMessage={handleRetryMessage}
+      mistralStatus={byokKey.trim() ? "byok" : serverMistral ? "secret" : "missing"}
     />
   );
 
@@ -595,7 +596,7 @@ export default function BuilderDemo() {
               darkPreview={darkPreview} onDarkPreviewChange={setDarkPreview}
               onLoadHistory={(h: GenerationHistoryItem) => { setCodeForRoute(activeRoute, h.code); setPreset(h.preset); setPreviewKey((k) => k + 1); }}
               fallbackEnabled={fallbackEnabled} onFallbackEnabledChange={setFallbackEnabled}
-              byokKey={byokKey} onByokKeyChange={setByokKey}
+              byokKey={byokKey} onByokKeyChange={setByokKey} serverMistral={serverMistral}
             />
           </div>
         </div>

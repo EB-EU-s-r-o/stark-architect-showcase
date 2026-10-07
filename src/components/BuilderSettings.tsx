@@ -24,6 +24,7 @@ interface BuilderSettingsProps {
   onFallbackEnabledChange: (v: boolean) => void;
   byokKey: string;
   onByokKeyChange: (v: string) => void;
+  serverMistral?: boolean;
 }
 
 export default function BuilderSettings({
@@ -39,6 +40,7 @@ export default function BuilderSettings({
   onFallbackEnabledChange,
   byokKey,
   onByokKeyChange,
+  serverMistral = false,
 }: BuilderSettingsProps) {
   const [open, setOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -121,7 +123,14 @@ export default function BuilderSettings({
                   <div className="flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-primary" />
                     <label className="text-sm font-medium">Mistral API key (BYOK)</label>
+                    <span className={cn("ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded border",
+                      byokKey ? "border-primary/40 text-primary" : serverMistral ? "border-primary/40 text-primary" : "border-border text-muted-foreground")}>
+                      {byokKey ? "BYOK aktívny" : serverMistral ? "Secret aktívny" : "Chýba"}
+                    </span>
                   </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Projektový secret MISTRAL_API_KEY: {serverMistral ? "nastavený ✓" : "nenájdený"}. Dočasný BYOK má prednosť.
+                  </p>
                   <Input
                     type="password"
                     value={byokKey}
