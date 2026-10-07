@@ -59,6 +59,7 @@ interface Props {
   onAskSelection: () => void;
   onClearSelection: () => void;
   onRetryMessage: (messageId: string) => void;
+  mistralStatus?: "secret" | "byok" | "missing";
 }
 
 export default function BuilderChatPanel({
@@ -80,6 +81,7 @@ export default function BuilderChatPanel({
   onAskSelection,
   onClearSelection,
   onRetryMessage,
+  mistralStatus = "missing",
 }: Props) {
   const copyMessage = (content: string) => navigator.clipboard.writeText(content);
 
@@ -210,7 +212,16 @@ export default function BuilderChatPanel({
                   <PromptInputSelectValue />
                 </PromptInputSelectTrigger>
                 <PromptInputSelectContent>
-                  {MODELS.map((item) => <PromptInputSelectItem key={item.id} value={item.id}>{item.label}</PromptInputSelectItem>)}
+                  {MODELS.map((item) => (
+                    <PromptInputSelectItem key={item.id} value={item.id} disabled={item.provider === "mistral" && mistralStatus === "missing"}>
+                      {item.label}
+                      {item.provider === "mistral" && (
+                        <span className="ml-2 text-[10px] text-muted-foreground">
+                          {mistralStatus === "byok" ? "· BYOK" : mistralStatus === "secret" ? "· aktívny" : "· bez kľúča"}
+                        </span>
+                      )}
+                    </PromptInputSelectItem>
+                  ))}
                 </PromptInputSelectContent>
               </PromptInputSelect>
             </PromptInputTools>

@@ -56,6 +56,11 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 2): Promis
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "GET") {
+    return new Response(JSON.stringify({ mistral: !!Deno.env.get("MISTRAL_API_KEY"), gemini: !!Deno.env.get("LOVABLE_API_KEY") }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const body = await req.json();
