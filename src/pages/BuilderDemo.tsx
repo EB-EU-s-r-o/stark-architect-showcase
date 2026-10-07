@@ -131,6 +131,11 @@ export default function BuilderDemo() {
   const isMistral = currentModel?.provider === "mistral";
 
   useEffect(() => { sessionStorage.setItem(BYOK_KEY, byokKey); }, [byokKey]);
+  const [serverMistral, setServerMistral] = useState(false);
+  useEffect(() => {
+    fetch(CHAT_URL, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } })
+      .then((r) => r.json()).then((d) => setServerMistral(!!d?.mistral)).catch(() => {});
+  }, []);
 
   // iframe messages
   useEffect(() => {
@@ -469,7 +474,7 @@ export default function BuilderDemo() {
   };
 
   const routeList = Object.keys(routes);
-  const hasMistralKey = MODELS.some((m) => m.provider === "mistral");
+  const hasMistralKey = serverMistral || byokKey.trim().length > 0;
 
   const deviceFrame = {
     mobile: "w-[390px] h-[680px] max-h-[72vh]",
