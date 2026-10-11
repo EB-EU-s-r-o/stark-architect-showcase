@@ -46,9 +46,16 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // Precache only the app shell; lazy chunks (syntax langs, diagrams) are cached on first use.
+        globPatterns: ["**/*.{css,html,ico,png,svg,woff2}", "assets/index-*.js"],
+        navigateFallbackDenylist: [/^\/~oauth/],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
+            handler: "CacheFirst",
+            options: { cacheName: "app-chunks", expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
@@ -67,6 +74,7 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  build: { chunkSizeWarningLimit: 2500 },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

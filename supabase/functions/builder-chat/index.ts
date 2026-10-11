@@ -140,9 +140,9 @@ serve(async (req) => {
       const text = await response.text().catch(() => "");
       console.error(`[${providerName}] ${response.status}: ${text.slice(0, 500)}`);
       if (response.status === 429) return jsonError(429, "rate_limited", { provider: providerName, fallback: providerName === "mistral" ? "google/gemini-2.5-flash" : null });
-      if (response.status === 402) return jsonError(402, "credits_exhausted", { provider: providerName });
+      if (response.status === 402) return jsonError(402, "credits_exhausted", { provider: providerName, fallback: providerName === "mistral" ? "google/gemini-2.5-flash" : null });
       if (response.status === 401) return jsonError(401, "unauthorized", { provider: providerName, fallback: providerName === "mistral" ? "google/gemini-2.5-flash" : null });
-      return jsonError(502, "upstream_error", { provider: providerName, status: response.status });
+      return jsonError(502, "upstream_error", { provider: providerName, status: response.status, fallback: providerName === "mistral" ? "google/gemini-2.5-flash" : null });
     }
 
     return new Response(response.body, {

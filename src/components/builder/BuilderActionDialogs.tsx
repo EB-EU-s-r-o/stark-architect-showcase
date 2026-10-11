@@ -35,9 +35,10 @@ interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onExport: (staged: boolean) => void;
+  onExportProject?: () => void;
 }
 
-export function BuilderExportDialog({ open, onOpenChange, onExport }: ExportDialogProps) {
+export function BuilderExportDialog({ open, onOpenChange, onExport, onExportProject }: ExportDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -55,6 +56,12 @@ export function BuilderExportDialog({ open, onOpenChange, onExport }: ExportDial
             <span><strong className="block">Staged preview</strong><small className="text-muted-foreground">Compact animated presentation.</small></span>
           </Button>
         </div>
+        {onExportProject && (
+          <Button variant="outline" className="h-auto items-start justify-start whitespace-normal border-primary/40 p-4 text-left" onClick={onExportProject}>
+            <Download className="mt-0.5" />
+            <span><strong className="block">Standalone React + Vite projekt</strong><small className="text-muted-foreground">package.json, vite.config.ts, tailwind.config.js, index.html — npm install &amp;&amp; npm run dev.</small></span>
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );
