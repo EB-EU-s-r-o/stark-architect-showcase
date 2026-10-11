@@ -149,7 +149,6 @@ export default function BuilderDemo() {
         });
       } else if (e.data?.type === "builder-select") {
         setSelectedEl(e.data.el);
-        setBottomTab("code");
       } else if (e.data?.type === "builder-text-edit") {
         const { from, to } = e.data as { from: string; to: string };
         if (from && to && from !== to) {
