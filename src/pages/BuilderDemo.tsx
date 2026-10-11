@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { lazy, Suspense } from "react";
 import {
   Braces, Check, Copy, Loader2, PanelLeft, Wand2, AlertTriangle,
   History, Code2, Eye, Terminal, GitCompare, ZoomIn, ZoomOut, Zap,
@@ -13,11 +14,10 @@ import { DEFAULT_MODEL_ID, getModel, MODELS } from "@/lib/builder-models";
 import { addToSession, approxTokens, calcCostUsd, formatCost, type Usage } from "@/lib/builder-cost";
 import { cacheGet, cachePut, makeKey } from "@/lib/builder-cache";
 import { getVersions, pushVersion, type Version } from "@/lib/builder-versions";
-import { exportBundle } from "@/lib/builder-export";
 import { detectRouteFromPrompt, loadRoutes, saveRoutes, type RouteMap } from "@/lib/builder-router";
 import BuilderSettings from "@/components/BuilderSettings";
 import BuilderConsole, { type ConsoleEntry } from "@/components/BuilderConsole";
-import BuilderCodeView from "@/components/BuilderCodeView";
+const BuilderCodeView = lazy(() => import("@/components/BuilderCodeView"));
 import BuilderRouteBar from "@/components/builder/BuilderRouteBar";
 import BuilderFloatingToolbar, { type BuilderTool } from "@/components/builder/BuilderFloatingToolbar";
 import BuilderVersions from "@/components/builder/BuilderVersions";
@@ -149,12 +149,16 @@ export default function BuilderDemo() {
         });
       } else if (e.data?.type === "builder-select") {
         setSelectedEl(e.data.el);
+        setBottomTab("code");
       } else if (e.data?.type === "builder-text-edit") {
         const { from, to } = e.data as { from: string; to: string };
         if (from && to && from !== to) {
           const patched = (routes[activeRoute] || "").split(from).join(to);
           if (patched !== routes[activeRoute]) {
             setCodeForRoute(activeRoute, patched);
+            pushVersion({ code: patched, prompt: `Inline edit: "${from.slice(0, 40)}" → "${to.slice(0, 40)}"`, route: activeRoute, model: "manual" });
+            setVersions(getVersions());
+            setPreviewKey((k) => k + 1);
             toast({ title: "Text upravený", description: `"${from.slice(0, 30)}" → "${to.slice(0, 30)}"` });
           } else {
             toast({ title: "Text nenájdený v kóde", description: "Použiť Ask AI namiesto inline edit.", variant: "destructive" });
@@ -431,8 +435,13 @@ export default function BuilderDemo() {
   const handleExport = () => setExportDialogOpen(true);
   const runExport = (staged: boolean) => {
     setExportDialogOpen(false);
-    exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`, { staged });
+    import("@/lib/builder-export").then(({ exportBundle }) => exportBundle(currentCode, `builder${activeRoute === "/" ? "-root" : activeRoute.replace(/\//g, "-")}`, { staged }));
     toast({ title: staged ? "Export: staged" : "Export: full-page" });
+  };
+  const runExportProject = () => {
+    setExportDialogOpen(false);
+    import("@/lib/builder-export").then(({ exportViteProject }) => exportViteProject(routes, `builder-app`));
+    toast({ title: "Export: React + Vite projekt", description: "Rozbaľ, npm install, npm run dev" });
   };
   const handleNewChat = () => {
     abortRef.current?.abort();
@@ -554,7 +563,7 @@ export default function BuilderDemo() {
             </div>
           )}
         </TabsContent>
-        <TabsContent value="code" className="m-0 min-h-0 flex-1 overflow-auto bg-card"><BuilderCodeView code={currentCode} /></TabsContent>
+        <TabsContent value="code" className="m-0 min-h-0 flex-1 overflow-auto bg-card"><Suspense fallback={<pre className="p-4 text-xs text-muted-foreground">{currentCode}</pre>}><BuilderCodeView code={currentCode} highlight={selectedEl?.text} /></Suspense></TabsContent>
         <TabsContent value="diff" className="m-0 min-h-0 flex-1"><BuilderDiffView previous={previousCode} current={currentCode} /></TabsContent>
         <TabsContent value="console" className="m-0 min-h-0 flex-1 overflow-hidden"><BuilderConsole entries={consoleEntries} onClear={() => setConsoleEntries([])} /></TabsContent>
         <TabsContent value="versions" className="m-0 min-h-0 flex-1 overflow-hidden"><BuilderVersions versions={versions} onRestore={handleRestoreVersion} /></TabsContent>
@@ -616,7 +625,7 @@ export default function BuilderDemo() {
         </div>
       </div>
       <BuilderRouteDialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen} onCreate={handleCreateRoute} />
-      <BuilderExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} onExport={runExport} />
+      <BuilderExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} onExport={runExport} onExportProject={runExportProject} />
       <BuilderPublishSheet open={publishOpen} onOpenChange={setPublishOpen} onExport={handleExport} />
     </div>
   );

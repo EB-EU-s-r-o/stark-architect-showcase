@@ -165,7 +165,7 @@ export default function BuilderChatPanel({
           <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-2 border border-primary/30 bg-primary/5 px-3 py-2 text-[11px]">
             <span className="truncate font-mono text-primary">&lt;{selectedEl.tag}&gt; {selectedEl.text.slice(0, 48)}</span>
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={onAskSelection}>Ask AI</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={onAskSelection}>Upraviť tento prvok cez AI</Button>
               <Button size="icon-sm" variant="ghost" onClick={onClearSelection} aria-label="Clear selection"><X /></Button>
             </div>
           </div>
