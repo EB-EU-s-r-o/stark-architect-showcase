@@ -10,10 +10,16 @@ let highlighterPromise: Promise<any> | null = null;
 
 function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = import("shiki").then((s) =>
-      s.createHighlighter({
-        themes: ["one-dark-pro"],
-        langs: ["tsx", "jsx"],
+    highlighterPromise = Promise.all([
+      import("shiki/core"),
+      import("shiki/engine/javascript"),
+      import("shiki/langs/tsx.mjs"),
+      import("shiki/themes/one-dark-pro.mjs"),
+    ]).then(([core, eng, tsx, theme]) =>
+      core.createHighlighterCore({
+        themes: [theme.default],
+        langs: [tsx.default],
+        engine: eng.createJavaScriptRegexEngine(),
       })
     );
   }
