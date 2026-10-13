@@ -31,7 +31,18 @@ const dl = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-const HOOKS = "import { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext } from \"react\";\n";
+const HOOKS = "import React, { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext } from \"react\";\n";
+
+/** Turn preview code (globals, no imports) into a valid ES module; tolerates stray imports/exports from AI output. */
+const toModule = (raw: string) => {
+  let code = raw
+    .replace(/^\s*import\s[^;]*?from\s+["']react(-dom)?(\/client)?["'];?\s*$/gm, "")
+    .replace(/^\s*export\s+default\s+App\s*;?\s*$/gm, "")
+    .replace(/^(\s*)export\s+default\s+function\s+App\b/m, "$1function App")
+    .replace(/^(\s*)export\s+(function|const|let)\s/gm, "$1$2 ");
+  const hasApp = /\b(function|const|let|class)\s+App\b/.test(code);
+  return `${HOOKS}\n${code.trim()}\n\n${hasApp ? "export default App;" : "export default function App() { return null; }"}\n`;
+};
 
 const compName = (route: string) =>
   route === "/" ? "Home" : route.replace(/[^a-zA-Z0-9]+/g, " ").trim().split(" ").map((w) => w[0].toUpperCase() + w.slice(1)).join("") || "Page";
@@ -57,7 +68,7 @@ export async function exportViteProject(routes: Record<string, string>, name = "
   const routeEls: string[] = [];
   for (const [route, code] of entries) {
     const c = compName(route);
-    zip.file(`src/pages/${c}.jsx`, `${HOOKS}\n${code}\n\nexport default App;\n`);
+    zip.file(`src/pages/${c}.jsx`, toModule(code));
     imports.push(`import ${c} from "./pages/${c}.jsx";`);
     routeEls.push(`        <Route path="${route}" element={<${c} />} />`);
   }
